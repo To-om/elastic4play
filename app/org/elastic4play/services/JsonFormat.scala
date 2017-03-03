@@ -8,8 +8,6 @@ import com.typesafe.config.{ ConfigObject, ConfigList, ConfigValue }
 import play.api.libs.json._
 import play.api.Configuration
 
-import com.sksamuel.elastic4s.QueryDefinition
-
 import org.elastic4play.models.BaseEntity
 import org.elastic4play.models.JsonFormat._
 import org.elastic4play.utils.JsonFormat.hashFormat

@@ -2,7 +2,6 @@ package org.elastic4play.database
 
 import javax.inject.{ Inject, Singleton }
 
-import scala.annotation.implicitNotFound
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.{ DurationLong, FiniteDuration }
@@ -19,8 +18,8 @@ import akka.util.Timeout
 import play.api.{ Configuration, Logger }
 import play.api.libs.json.{ JsNull, JsObject, JsString, Json }
 
-import com.sksamuel.elastic4s.{ RichSearchHit, RichSearchResponse, SearchDefinition }
-import com.sksamuel.elastic4s.ElasticDsl.{ clear, searchScroll }
+import com.sksamuel.elastic4s.ElasticDsl.{ clearScroll, searchScroll }
+import com.sksamuel.elastic4s.searches.{ RichSearchHit, RichSearchResponse, SearchDefinition }
 
 import org.elastic4play.{ InternalError, SearchError, Timed }
 
@@ -120,8 +119,8 @@ class DBFind(
     val id = JsString(hit.id)
     Json.parse(hit.sourceAsString).as[JsObject] +
       ("_type" → JsString(hit.`type`)) +
-      ("_routing" → hit.fields.get("_routing").map(r ⇒ JsString(r.value[String])).getOrElse(id)) +
-      ("_parent" → hit.fields.get("_parent").map(r ⇒ JsString(r.value[String])).getOrElse(JsNull)) +
+      ("_routing" → hit.fields.get("_routing").map(r ⇒ JsString(r.java.value[String])).getOrElse(id)) +
+      ("_parent" → hit.fields.get("_parent").map(r ⇒ JsString(r.java.value[String])).getOrElse(JsNull)) +
       ("_id" → id)
   }
 
@@ -136,9 +135,9 @@ class DBFind(
   def apply(range: Option[String], sortBy: Seq[String])(query: (String) ⇒ SearchDefinition): (Source[JsObject, NotUsed], Future[Long]) = {
     val (offset, limit) = getOffsetAndLimitFromRange(range)
     val sortDef = DBUtils.sortDefinition(sortBy)
-    val searchDefinition = query(indexName) fields ("_source", "_routing", "_parent") start offset sort (sortDef: _*)
+    val searchDefinition = query(indexName).storedFields("_source", "_routing", "_parent").start(offset).sortBy(sortDef)
 
-    log.debug(s"search ${searchDefinition._builder}")
+    // FIXME log.debug(s"search ${searchDefinition._builder}")
     val (src, total) = if (limit > pageSize) {
       searchWithScroll(searchDefinition, limit)
     }
@@ -263,7 +262,7 @@ class SearchPublisher(
         processed = processed + 1
         if (processed == max && max > 0) {
           onComplete()
-          scrollId.foreach { s ⇒ db.execute(clear scroll s) }
+          scrollId.foreach { s ⇒ db.execute(clearScroll(s)) }
           context.stop(self)
         }
       }

@@ -4,17 +4,16 @@ import javax.inject.{ Inject, Singleton }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.language.postfixOps
-import scala.util.{ Failure, Success, Try }
 
 import play.api.Logger
 import play.api.libs.json.{ JsArray, JsBoolean, JsNull, JsNumber, JsObject, JsString, JsValue, Json }
 
-import org.elastic4play.{ Timed, UpdateError }
-import org.elastic4play.models.BaseEntity
-import org.elasticsearch.action.update.UpdateResponse
+import org.elasticsearch.action.support.WriteRequest.RefreshPolicy
 
-import com.sksamuel.elastic4s.ElasticDsl.{ bulk, script, update }
+import com.sksamuel.elastic4s.ElasticDsl.{ script, update }
 import com.sksamuel.elastic4s.IndexAndTypes.apply
+
+import org.elastic4play.models.BaseEntity
 
 @Singleton
 class DBModify @Inject() (
@@ -68,7 +67,12 @@ class DBModify @Inject() (
   }
 
   private[database] case class UpdateParams(entity: BaseEntity, updateScript: String, params: Map[String, Any], attributes: JsObject) {
-    def updateDef = update id entity.id in s"${db.indexName}/${entity.model.name}" routing entity.routing script { script(updateScript).params(params) } fields "_source" retryOnConflict 5
+    def updateDef = update(entity.id)
+      .in(db.indexName → entity.model.name)
+      .routing(entity.routing)
+      .script(script(updateScript).params(params))
+      .fetchSource(true)
+      .retryOnConflict(5)
     def result(attrs: JsObject) =
       entity.model(attrs +
         ("_type" → JsString(entity.model.name)) +
@@ -89,26 +93,9 @@ class DBModify @Inject() (
   }
 
   private[database] def executeScript(params: UpdateParams): Future[BaseEntity] = {
-    db.execute(params.updateDef refresh true)
+    db.execute(params.updateDef.refresh(RefreshPolicy.IMMEDIATE))
       .map { updateResponse ⇒
-        params.result(Json.parse(updateResponse.getGetResult.sourceAsString).as[JsObject])
-      }
-  }
-
-  private[database] def executeScript(params: Seq[UpdateParams]): Future[Seq[Try[BaseEntity]]] = {
-    if (params.isEmpty)
-      return Future.successful(Nil)
-    db.execute(bulk(params.map(_.updateDef)) refresh true)
-      .map { bulkResponse ⇒
-        bulkResponse.items.zip(params).map {
-          case (bulkItemResponse, p) if bulkItemResponse.isFailure ⇒
-            val failure = bulkItemResponse.failure
-            log.warn(s"create failure : ${failure.getIndex} ${failure.getId} ${failure.getType} ${failure.getMessage} ${failure.getStatus}")
-            Failure(UpdateError(Option(failure.getStatus.name), failure.getMessage, p.attributes))
-          case (bulkItemResponse, p) ⇒
-            val updateResponse = bulkItemResponse.original.getResponse[UpdateResponse]
-            Success(p.result(Json.parse(updateResponse.getGetResult.sourceAsString).as[JsObject]))
-        }
+        params.result(Json.parse(updateResponse.get.sourceAsString).as[JsObject])
       }
   }
 }

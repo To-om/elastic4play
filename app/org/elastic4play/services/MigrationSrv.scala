@@ -89,7 +89,7 @@ class MigrationSrv @Inject() (
   case class OriginState(db: DBConfiguration) extends DatabaseState {
     val currentdbfind = dbfind.switchTo(db)
     override def version = db.version
-    override def source(tableName: String): Source[JsObject, NotUsed] = currentdbfind.apply(Some("all"), Nil)(indexName ⇒ search in indexName → tableName query QueryDSL.any.query)._1
+    override def source(tableName: String): Source[JsObject, NotUsed] = currentdbfind.apply(Some("all"), Nil)(indexName ⇒ search(indexName, tableName).query(QueryDSL.any.query))._1
     override def count(tableName: String) = new DBIndex(db, ec).getSize(tableName)
     override def getEntity(tableName: String, entityId: String) = dbget(tableName, entityId)
   }

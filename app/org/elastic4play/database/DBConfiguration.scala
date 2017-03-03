@@ -2,7 +2,6 @@ package org.elastic4play.database
 
 import javax.inject.{ Inject, Named, Singleton }
 
-import scala.annotation.implicitNotFound
 import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.concurrent.duration.DurationInt
 
@@ -16,14 +15,20 @@ import play.api.inject.ApplicationLifecycle
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse
 import org.elasticsearch.action.delete.DeleteResponse
-import org.elasticsearch.action.update.UpdateResponse
 import org.elasticsearch.common.settings.Settings
 
-import com.sksamuel.elastic4s.{ BulkDefinition, BulkItemResult, BulkResult, ClearScrollDefinition, ClearScrollResult, CreateIndexDefinition, DeleteByIdDefinition, ElasticClient }
-import com.sksamuel.elastic4s.{ ElasticsearchClientUri, GetDefinition, IndexDefinition, IndexResult, RichGetResponse, RichSearchHit, RichSearchResponse, SearchDefinition, SearchScrollDefinition, UpdateDefinition, admin }
-import com.sksamuel.elastic4s.ElasticDsl.{ BulkDefinitionExecutable, ClearScrollDefinitionExecutable, CreateIndexDefinitionExecutable, DeleteByIdDefinitionExecutable, GetDefinitionExecutable, IndexDefinitionExecutable, IndexExistsDefinitionExecutable, ScrollExecutable, SearchDefinitionExecutable, UpdateDefinitionExecutable }
+import com.sksamuel.elastic4s.{ ElasticsearchClientUri, TcpClient }
+import com.sksamuel.elastic4s.ElasticDsl.{ ClearScrollDefinitionExecutable, CreateIndexDefinitionExecutable, DeleteByIdDefinitionExecutable, GetDefinitionExecutable, IndexDefinitionExecutable, IndexExistsDefinitionExecutable, ScrollExecutable, SearchDefinitionExecutable, UpdateDefinitionExecutable }
+import com.sksamuel.elastic4s.admin.IndexExistsDefinition
+import com.sksamuel.elastic4s.bulk.RichBulkItemResponse
+import com.sksamuel.elastic4s.delete.DeleteByIdDefinition
+import com.sksamuel.elastic4s.get.{ GetDefinition, RichGetResponse }
+import com.sksamuel.elastic4s.index.RichIndexResponse
+import com.sksamuel.elastic4s.indexes.{ CreateIndexDefinition, IndexDefinition }
+import com.sksamuel.elastic4s.searches.{ ClearScrollDefinition, ClearScrollResult, RichSearchHit, RichSearchResponse, SearchDefinition, SearchScrollDefinition }
 import com.sksamuel.elastic4s.streams.{ RequestBuilder, ResponseListener }
 import com.sksamuel.elastic4s.streams.ReactiveElastic.ReactiveElastic
+import com.sksamuel.elastic4s.update.{ RichUpdateResponse, UpdateDefinition }
 
 import org.elastic4play.Timed
 
@@ -58,33 +63,31 @@ class DBConfiguration(
       actorSystem)
   }
 
-  lazy val log = Logger(getClass)
+  lazy val logger = Logger(getClass)
 
   /**
    * Underlying ElasticSearch client
    */
-  private val client: ElasticClient = ElasticClient.transport(
-    Settings.settingsBuilder().put("cluster.name", searchCluster).build(),
-    ElasticsearchClientUri(searchHost.mkString(",")))
+  private val client = TcpClient.transport(
+    Settings.builder().put("cluster.name", searchCluster).build(),
+    ElasticsearchClientUri(searchHost.map(h ⇒ s"elasticsearch://$h").mkString(",")))
   // when application close, close also ElasticSearch connection
   lifecycle.addStopHook { () ⇒ Future { client.close() } }
 
   @Timed("database.index")
-  def execute(indexDefinition: IndexDefinition): Future[IndexResult] = client.execute(indexDefinition)
+  def execute(indexDefinition: IndexDefinition): Future[RichIndexResponse] = client.execute(indexDefinition)
   @Timed("database.search")
   def execute(searchDefinition: SearchDefinition): Future[RichSearchResponse] = client.execute(searchDefinition)
   @Timed("database.create")
   def execute(createIndexDefinition: CreateIndexDefinition): Future[CreateIndexResponse] = client.execute(createIndexDefinition)
   @Timed("database.update")
-  def execute(updateDefinition: UpdateDefinition): Future[UpdateResponse] = client.execute(updateDefinition)
+  def execute(updateDefinition: UpdateDefinition): Future[RichUpdateResponse] = client.execute(updateDefinition)
   @Timed("database.search_scroll")
   def execute(searchScrollDefinition: SearchScrollDefinition): Future[RichSearchResponse] = client.execute(searchScrollDefinition)
   @Timed("database.index_exists")
-  def execute(indexExistsDefinition: admin.IndexExistsDefinition): Future[IndicesExistsResponse] = client.execute(indexExistsDefinition)
+  def execute(indexExistsDefinition: IndexExistsDefinition): Future[IndicesExistsResponse] = client.execute(indexExistsDefinition)
   @Timed("database.delete")
   def execute(deleteByIdDefinition: DeleteByIdDefinition): Future[DeleteResponse] = client.execute(deleteByIdDefinition)
-  @Timed("database.bulk")
-  def execute(bulkDefinition: BulkDefinition): Future[BulkResult] = client.execute(bulkDefinition)
   @Timed("database.get")
   def execute(getDefinition: GetDefinition): Future[RichGetResponse] = client.execute(getDefinition)
   @Timed("database.clear_scroll")
@@ -96,9 +99,9 @@ class DBConfiguration(
   def source(searchDefinition: SearchDefinition): Source[RichSearchHit, NotUsed] = Source.fromPublisher(client.publisher(searchDefinition))
 
   private lazy val sinkListener = new ResponseListener {
-    override def onAck(resp: BulkItemResult): Unit = ()
-    override def onFailure(resp: BulkItemResult): Unit = {
-      log.warn(s"Document index failure ${resp.id}: ${resp.failureMessage}")
+    override def onAck(resp: RichBulkItemResponse): Unit = ()
+    override def onFailure(resp: RichBulkItemResponse): Unit = {
+      logger.warn(s"Document index failure ${resp.id}: ${resp.failureMessage}")
     }
   }
 

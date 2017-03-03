@@ -22,7 +22,7 @@ import org.scalactic.{ Bad, Every, Good, One, Or }
 import org.scalactic.Accumulation.convertGenTraversableOnceToValidatable
 
 import com.sksamuel.elastic4s.ElasticDsl.field
-import com.sksamuel.elastic4s.mappings.FieldType.{ BinaryType, BooleanType, DateType, LongType, NestedType, ObjectType, StringType }
+import com.sksamuel.elastic4s.mappings.FieldType.{ BinaryType, BooleanType, DateType, LongType, NestedType, ObjectType, TextType }
 import com.sksamuel.elastic4s.mappings.{ attributes, TypedFieldDefinition }
 
 abstract class AttributeFormat[T](val name: String)(implicit val jsFormat: Format[T]) {
@@ -54,7 +54,7 @@ object TextAttributeFormat extends AttributeFormat[String]("text") {
     case _              ⇒ None
   }
   override val swaggerType = Json.obj("type" → "string")
-  override def elasticType(attributeName: String) = field(attributeName, StringType)
+  override def elasticType(attributeName: String) = field(attributeName, TextType)
 }
 
 object StringAttributeFormat extends AttributeFormat[String]("string") {
@@ -71,7 +71,7 @@ object StringAttributeFormat extends AttributeFormat[String]("string") {
     case _              ⇒ None
   }
   override val swaggerType = Json.obj("type" → "string")
-  override def elasticType(attributeName: String) = field(attributeName, StringType) index "not_analyzed"
+  override def elasticType(attributeName: String) = field(attributeName, TextType) index "not_analyzed"
 }
 
 object DateAttributeFormat extends AttributeFormat[Date]("date") {
@@ -184,7 +184,7 @@ case class EnumerationAttributeFormat[T <: Enumeration](enum: T)(implicit tag: C
 
   override def swaggerType = JsObject(Seq("type" → JsString("string"), "enum" → JsArray(enum.values.map(v ⇒ JsString(v.toString)).toSeq)))
 
-  override def elasticType(attributeName: String) = field(attributeName, StringType) index "not_analyzed"
+  override def elasticType(attributeName: String) = field(attributeName, TextType) index "not_analyzed"
 }
 
 case class ListEnumeration(enumerationName: String)(dblists: DBLists) extends AttributeFormat[String](s"enumeration") {
@@ -209,7 +209,7 @@ case class ListEnumeration(enumerationName: String)(dblists: DBLists) extends At
     case _                                   ⇒ None
   }
   override def swaggerType = JsObject(Seq("type" → JsString("string"), "enum" → JsArray(items.toSeq.map(JsString))))
-  override def elasticType(attributeName: String) = field(attributeName, StringType) index "not_analyzed"
+  override def elasticType(attributeName: String) = field(attributeName, TextType) index "not_analyzed"
 }
 
 object UUIDAttributeFormat extends AttributeFormat[UUID]("uuid") {
@@ -232,7 +232,7 @@ object UUIDAttributeFormat extends AttributeFormat[UUID]("uuid") {
     case _              ⇒ None
   }
   override val swaggerType = Json.obj("type" → "string")
-  override def elasticType(attributeName: String) = field(attributeName, StringType) index "not_analyzed"
+  override def elasticType(attributeName: String) = field(attributeName, TextType) index "not_analyzed"
 }
 
 object HashAttributeFormat extends AttributeFormat[String]("hash") {
@@ -257,7 +257,7 @@ object HashAttributeFormat extends AttributeFormat[String]("hash") {
     case _                                                       ⇒ None
   }
   override val swaggerType = Json.obj("type" → "string")
-  override def elasticType(attributeName: String) = field(attributeName, StringType) index "not_analyzed"
+  override def elasticType(attributeName: String) = field(attributeName, TextType) index "not_analyzed"
 }
 
 object AttachmentAttributeFormat extends AttributeFormat[Attachment]("attachment") {
@@ -298,11 +298,11 @@ object AttachmentAttributeFormat extends AttributeFormat[Attachment]("attachment
   }
   override val swaggerType = Json.obj("type" → "File", "required" → true) // swagger bug : File input must be required
   override def elasticType(attributeName: String) = field(attributeName, NestedType) as (
-    field("name", StringType) index "not_analyzed",
-    field("hashes", StringType) index "not_analyzed",
+    field("name", TextType) index "not_analyzed",
+    field("hashes", TextType) index "not_analyzed",
     field("size", LongType),
-    field("contentType", StringType),
-    field("id", StringType))
+    field("contentType", TextType),
+    field("id", TextType))
 }
 
 case class ObjectAttributeFormat(subAttributes: Seq[Attribute[_]]) extends AttributeFormat[JsObject]("nested") {

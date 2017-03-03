@@ -3,7 +3,6 @@ package org.elastic4play.database
 import javax.inject.{ Inject, Singleton }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
 
 import akka.stream.scaladsl.Sink
 
@@ -11,19 +10,15 @@ import play.api.Logger
 import play.api.libs.json.{ JsNull, JsObject, JsString, JsValue }
 import play.api.libs.json.JsValue.jsValueToJsLookup
 
-import org.elasticsearch.action.index.IndexResponse
+import org.elasticsearch.action.support.WriteRequest.RefreshPolicy
 import org.elasticsearch.transport.RemoteTransportException
 
-import com.sksamuel.elastic4s.ElasticDsl.{ bulk, index }
-import com.sksamuel.elastic4s.IndexAndTypes.apply
-import com.sksamuel.elastic4s.IndexDefinition
-import com.sksamuel.elastic4s.source.JsonDocumentSource
+import com.sksamuel.elastic4s.ElasticDsl.indexInto
+import com.sksamuel.elastic4s.indexes.IndexDefinition
 import com.sksamuel.elastic4s.streams.RequestBuilder
 
-import org.elastic4play.{ CreateError, Timed }
+import org.elastic4play.CreateError
 import org.elastic4play.models.BaseEntity
-import org.elasticsearch.index.engine.DocumentAlreadyExistsException
-import org.elastic4play.ConflictError
 
 /**
  * Service lass responsible for entity creation
@@ -33,7 +28,8 @@ import org.elastic4play.ConflictError
 class DBCreate @Inject() (
     db: DBConfiguration,
     implicit val ec: ExecutionContext) {
-  val log = Logger(getClass)
+
+  val logger = Logger(getClass)
 
   /**
    * Create an entity of type "modelName" with attributes
@@ -66,34 +62,10 @@ class DBCreate @Inject() (
     create(params)
   }
 
-  /**
-   * Create entities using list of CreateParams
-   *
-   * @param params data used for entity creation
-   * @return for each requested entity creation, a try of its attributes
-   * attributes contain _id and _routing (and _parent if entity is a child)
-   */
-  @deprecated("Bulk creation is deprecated. Use single creation in a loop", "1.1.2")
-  private[database] def create(params: Seq[CreateParams]): Future[Seq[Try[JsObject]]] = {
-    if (params.isEmpty)
-      return Future.successful(Nil)
-    db.execute(bulk(params.map(_.indexDef)) refresh true)
-      .map { bulkResult ⇒
-        bulkResult.items.zip(params).map {
-          case (bulkItemResponse, p) if bulkItemResponse.isFailure ⇒
-            val failure = bulkItemResponse.failure
-            log.warn(s"create failure : ${failure.getId} ${failure.getType} ${failure.getMessage} ${failure.getStatus}")
-            Failure(CreateError(Option(failure.getStatus.name), failure.getMessage, p.attributes))
-          case (bulkItemResponse, p) ⇒
-            Success(p.result(bulkItemResponse.original.getResponse[IndexResponse].getId))
-        }
-      }
-  }
-
   private[database] def convertError(params: CreateParams, error: Throwable): Throwable = error match {
-    case rte: RemoteTransportException        ⇒ convertError(params, rte.getCause)
-    case daee: DocumentAlreadyExistsException ⇒ ConflictError(daee.getMessage, params.attributes)
-    case other                                ⇒ CreateError(None, other.getMessage, params.attributes)
+    case rte: RemoteTransportException ⇒ convertError(params, rte.getCause)
+    // FIXME case daee: DocumentAlreadyExistsException ⇒ ConflictError(daee.getMessage, params.attributes)
+    case other                         ⇒ CreateError(None, other.getMessage, params.attributes)
   }
 
   /**
@@ -104,8 +76,8 @@ class DBCreate @Inject() (
    * attributes contain _id and _routing (and _parent if entity is a child)
    */
   private[database] def create(params: CreateParams): Future[JsObject] = {
-    db.execute(params.indexDef refresh true).transform(
-      indexResponse ⇒ params.result(indexResponse.getId),
+    db.execute(params.indexDef.refresh(RefreshPolicy.IMMEDIATE)).transform(
+      indexResponse ⇒ params.result(indexResponse.id),
       convertError(params, _))
   }
 
@@ -148,9 +120,9 @@ class DBCreate @Inject() (
      */
     val indexDef: IndexDefinition = {
       // remove attributes that starts with "_" because we wan't permit to interfere with elasticsearch internal fields
-      val docSource = JsonDocumentSource(JsObject(attributes.fields.filterNot(_._1.startsWith("_"))).toString)
+      val docSource = JsObject(attributes.fields.filterNot(_._1.startsWith("_"))).toString
       addId(id).andThen(addParent(parentId)).andThen(addRouting(routing)) {
-        index into db.indexName → modelName doc docSource update true
+        indexInto(db.indexName, modelName).source(docSource)
       }
     }
 
@@ -172,12 +144,12 @@ class DBCreate @Inject() (
    */
   private class AttributeRequestBuilder(modelName: String) extends RequestBuilder[JsObject] {
     override def request(attributes: JsObject): IndexDefinition = {
-      val docSource = JsonDocumentSource(JsObject(attributes.fields.filterNot(_._1.startsWith("_"))).toString)
+      val docSource = JsObject(attributes.fields.filterNot(_._1.startsWith("_"))).toString
       val id = (attributes \ "_id").asOpt[String]
       val parent = (attributes \ "_parent").asOpt[String]
       val routing = (attributes \ "_routing").asOpt[String] orElse parent orElse id
       addId(id).andThen(addParent(parent)).andThen(addRouting(routing)) {
-        index into db.indexName → modelName doc docSource update true
+        indexInto(db.indexName, modelName).source(docSource)
       }
     }
   }

@@ -14,8 +14,9 @@ scalaVersion := "2.11.8"
 
 libraryDependencies ++= Seq(
   cache,
-  "com.sksamuel.elastic4s" %% "elastic4s-core" % "2.3.0",
-  "com.sksamuel.elastic4s" %% "elastic4s-streams" % "2.3.0",
+  "org.scalactic" %% "scalactic" % "3.0.1",
+  "com.sksamuel.elastic4s" %% "elastic4s-core" % "5.2.10",
+  "com.sksamuel.elastic4s" %% "elastic4s-streams" % "5.2.10",
   "com.typesafe.akka" %% "akka-stream-testkit" % "2.4.4" % Test,
   specs2 % Test
 )

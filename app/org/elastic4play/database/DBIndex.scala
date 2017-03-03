@@ -2,13 +2,11 @@ package org.elastic4play.database
 
 import javax.inject.{ Inject, Singleton }
 
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.blocking
+import scala.concurrent.{ ExecutionContext, Future, blocking }
 
 import com.sksamuel.elastic4s.ElasticDsl.{ RichFuture, index, mapping, search }
-import com.sksamuel.elastic4s.IndexesAndTypes.apply
+import com.sksamuel.elastic4s.indexes.CreateIndexDefinition
 
-import org.elastic4play.Timed
 import org.elastic4play.models.{ ChildModelDef, ModelAttributes, ModelDef }
 
 @Singleton
@@ -24,12 +22,21 @@ class DBIndex @Inject() (
   def createIndex(models: Iterable[ModelAttributes]) = {
     val modelsMapping = models
       .map {
-        case model: ModelDef[_, _]            ⇒ mapping(model.name) fields model.attributes.filterNot(_.name == "_id").map(_.elasticMapping) dateDetection false numericDetection false
-        case model: ChildModelDef[_, _, _, _] ⇒ mapping(model.name) fields model.attributes.filterNot(_.name == "_id").map(_.elasticMapping) parent model.parentModel.name dateDetection false numericDetection false
+        case model: ModelDef[_, _] ⇒
+          mapping(model.name)
+            .fields(model.attributes.filterNot(_.name == "_id").map(_.elasticMapping))
+            .dateDetection(false)
+            .numericDetection(false)
+        case model: ChildModelDef[_, _, _, _] ⇒
+          mapping(model.name)
+            .fields(model.attributes.filterNot(_.name == "_id").map(_.elasticMapping))
+            .parent(model.parentModel.name)
+            .dateDetection(false)
+            .numericDetection(false)
       }
       .toSeq
     db.execute {
-      com.sksamuel.elastic4s.ElasticDsl.create index db.indexName mappings (modelsMapping: _*)
+      CreateIndexDefinition(db.indexName).mappings(modelsMapping)
     }
       .map { _ ⇒ () }
   }
@@ -60,7 +67,7 @@ class DBIndex @Inject() (
    * @return document count
    */
   def getSize(modelName: String): Future[Long] = db.execute {
-    search in db.indexName → modelName size 0
+    search(db.indexName, modelName).size(0)
   } map { searchResponse ⇒
     searchResponse.totalHits
   } recover {
