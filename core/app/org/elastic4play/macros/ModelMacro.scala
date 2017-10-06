@@ -1,15 +1,14 @@
 package org.elastic4play.macros
 
 import org.elastic4play.models.{ Model, WithParent }
-
 import scala.reflect.macros.blackbox
 
 class ModelMacro(val c: blackbox.Context)
-    extends DatabaseMappingMacro
-    with DatabaseReadsMacro
-    with DatabaseWritesMacro
-    with JsonMacro
-    with AttachmentMacro {
+  extends DatabaseMappingMacro
+  with DatabaseReadsMacro
+  with DatabaseWritesMacro
+  with JsonMacro
+  with AttachmentMacro {
 
   import c.universe._
 
@@ -21,11 +20,13 @@ class ModelMacro(val c: blackbox.Context)
     val className: String = entityType.toString.split("\\.").last
     val modelName: String = Character.toLowerCase(className.charAt(0)) + className.substring(1)
 
+    val withParentType = weakTypeOf[WithParent[_]]
     val parents = entityType.typeSymbol.annotations
       .collectFirst {
-        case annotation if annotation.tree.tpe <:< typeOf[WithParent] ⇒
-          val parentModel = annotation.tree.children.tail.head
-          q" $parentModel +: $parentModel.parents "
+        case annotation if annotation.tree.tpe <:< withParentType ⇒
+          val TypeRef(_, _, List(parentEntityType)) = annotation.tree.tpe
+          val parentName = TermName(parentEntityType.toString)
+          q"$parentName.model +: $parentName.model.parents"
       }
       .getOrElse(q"Nil")
 
@@ -34,14 +35,14 @@ class ModelMacro(val c: blackbox.Context)
         import scala.concurrent.{ ExecutionContext, Future }
         import scala.util.{ Failure, Try }
         import org.elastic4play.InternalError
-        import org.elastic4play.models.{ Entity, Model }
+        import org.elastic4play.models.{ Entity, FPath, Model, UpdateOps }
         import org.elastic4play.services.AttachmentSrv
 
         new Model {
           type E = $entityType
 
           val name = $modelName
-          val parents = $parents
+          lazy val parents = $parents
 
           val databaseMapping = ${getDatabaseEntityMapping[E]}
           val databaseReads = ${getDatabaseReads[E]}.andMap { (maybeJson, e) ⇒

@@ -1,6 +1,8 @@
 package org.elastic4play.macros
 
-import org.elastic4play.models.{ FNull, FNumber, FObject, FSeq, FString, FieldsParser }
+import java.nio.file.Paths
+
+import org.elastic4play.models.{ FFile, FNull, FNumber, FObject, FSeq, FString, FieldsParser }
 import org.scalactic.Good
 import org.specs2.mutable.Specification
 
@@ -48,7 +50,7 @@ class FieldsParserMacroTest extends Specification with TestUtils {
       val subClassRegex = "(\\w+),(\\d+)".r
       implicit val subClassFieldsParser: FieldsParser[SubClassForFieldsParserMacroTest] = FieldsParser[SubClassForFieldsParserMacroTest]("SubClass") {
         case (_, FString(subClassRegex(name, value))) ⇒ Good(SubClassForFieldsParserMacroTest(name, Some(value.toInt)))
-        case (_, FString(name))                       ⇒ Good(SubClassForFieldsParserMacroTest(name, None))
+        case (_, FString(name)) ⇒ Good(SubClassForFieldsParserMacroTest(name, None))
       }
       val fieldsParser = getFieldsParser[ComplexClassForFieldsParserMacroTest]
       val fields = FObject(
@@ -62,7 +64,27 @@ class FieldsParserMacroTest extends Specification with TestUtils {
     }
 
     "parse class with multi attachments in sub fields" in {
-      todo
+      val fieldsParser = getFieldsParser[MultiAttachClassForFieldsParserMacroTest]
+      val fields = FObject(
+        "name" -> FString("attachClass"),
+        "attachments" -> FSeq(
+          FObject(
+            "name" -> FString("attach1"),
+            "mainAttach" -> FFile("file1", Paths.get("/tmp/file1"), "text/plain"),
+            "otherAttach" -> FSeq(
+              FFile("file2", Paths.get("/tmp/file2"), "text/plain"),
+              FFile("file3", Paths.get("/tmp/file3"), "text/plain")
+            )),
+          FObject("name" -> FString("attach2"),
+            "mainAttach" -> FString("attach2"),
+            "mainAttach" -> FFile("file4", Paths.get("/tmp/file4"), "text/plain"),
+          )))
+      val multiAttachClass = MultiAttachClassForFieldsParserMacroTest("attachClass", Seq(
+        SubMultiAttachClassForFieldsParserMacroTest("attach1", FFile("file1", Paths.get("/tmp/file1"), "text/plain"), Seq(FFile("file2", Paths.get("/tmp/file2"), "text/plain"),
+          FFile("file3", Paths.get("/tmp/file3"), "text/plain"))),
+        SubMultiAttachClassForFieldsParserMacroTest("attach2", FFile("file4", Paths.get("/tmp/file4"), "text/plain"), Nil)))
+
+      fieldsParser(fields) must_=== Good(multiAttachClass)
     }
   }
 }

@@ -100,8 +100,8 @@ case class FieldsParser[T](formatName: String)(val parse: PartialFunction[(FPath
             .foldRight[List[T] Or Every[AttributeError]](Good(Nil)) { (x, xs) ⇒
               withGood(x, xs)(_ :: _)
             }
-        case FNull ⇒ Good(Nil)
-        case other ⇒ Bad(One(InvalidFormatAttributeError(path.toString, "object", other)))
+        case FNull | FUndefined ⇒ Good(Nil)
+        case other              ⇒ Bad(One(InvalidFormatAttributeError(path.toString, "object", other)))
       }
   }
 

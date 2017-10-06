@@ -43,6 +43,8 @@ object BuildSettings extends AutoPlugin {
     javaOptions ++= Seq(
       "-Xmx1G",
       "-Dlog4j.configurationFile=conf/log4j2.xml"),
+    resolvers += Resolver.sonatypeRepo("releases"),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
 
     //SbtScalariform.defaultScalariformSettings,
     ScalariformKeys.preferences := ScalariformKeys.preferences.value
@@ -54,7 +56,7 @@ object BuildSettings extends AutoPlugin {
       .setPreference(AlignSingleLineCaseStatements.MaxArrowIndent, 60)
       .setPreference(CompactControlReadability, true)
       .setPreference(CompactStringConcatenation, false)
-      .setPreference(DoubleIndentClassDeclaration, true)
+      .setPreference(DoubleIndentConstructorArguments, true)
       //  .setPreference(DoubleIndentMethodDeclaration, true)
       .setPreference(FormatXml, true)
       .setPreference(IndentLocalDefs, false)

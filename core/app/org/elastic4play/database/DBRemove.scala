@@ -10,8 +10,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class DBRemove @Inject() (
-  db: DBConfiguration,
-  implicit val ec: ExecutionContext) {
+    db: DBConfiguration,
+    implicit val ec: ExecutionContext) {
 
   def apply(modelName: String, entityId: String, entityRouting: String): Future[Boolean] = {
     db.execute {

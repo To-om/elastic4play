@@ -24,11 +24,11 @@ case class RequestProcessStart(request: RequestHeader) extends EventMessage
 case class RequestProcessEnd(request: RequestHeader, result: Try[Result]) extends EventMessage
 
 case class AuditOperation(
-  entity: Entity,
-  action: AuditableAction.Type,
-  details: JsObject,
-  authContext: AuthContext,
-  date: Date = new Date()) extends EventMessage
+    entity: Entity,
+    action: AuditableAction.Type,
+    details: JsObject,
+    authContext: AuthContext,
+    date: Date = new Date()) extends EventMessage
 
 object AuditOperation {
   def create(entity: Entity, details: JsObject)(implicit authContext: AuthContext): AuditOperation =

@@ -13,14 +13,12 @@ trait AttachmentMacro {
    * Create a function that save all attachment of an E
    * @tparam E
    * @return
-   * @usecase def mkAttachmentSaver[E]: Expr[AttachmentSrv] ⇒ Expr[E] ⇒ Expr[Future[E]\]
-   * :K
    */
   // TODO save attachment in subfields
   def mkAttachmentSaver[E: WeakTypeTag]: Tree = {
-    val eTpe = weakTypeOf[E]
-    val saver = eTpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.head
-      .foldLeft[Tree](q"(e: $eTpe) ⇒ scala.concurrent.Future.successful(e)") {
+    val eType = weakTypeOf[E]
+    val saver = eType.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.head
+      .foldLeft[Tree](q"(e: $eType) ⇒ scala.concurrent.Future.successful(e)") {
         case (fe, element) if element.asTerm.typeSignature <:< typeOf[Attachment] ⇒
           val elementName = element.asTerm.name
           q"""
@@ -56,8 +54,8 @@ trait AttachmentMacro {
 
   // TODO save attachment in subfields
   def mkUpdateAttachmentSaver[E: WeakTypeTag]: Tree = {
-    val eTpe = weakTypeOf[E]
-    val saver = eTpe.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.head
+    val eType = weakTypeOf[E]
+    val saver = eType.typeSymbol.asClass.primaryConstructor.typeSignature.paramLists.head
       .foldLeft[Tree](q"(ops: Map[org.elastic4play.models.FPath, org.elastic4play.models.UpdateOps.Type]) ⇒ scala.concurrent.Future.successful(ops)") {
         case (fo, element) if element.asTerm.typeSignature <:< typeOf[Attachment] ⇒
           val elementName = element.asTerm.name.toString

@@ -29,12 +29,12 @@ trait DBList {
 
 @Singleton
 class DBLists @Inject() (
-  dbFind: DBFind,
-  dbCreate: DBCreate,
-  dbRemove: DBRemove,
-  cache: SyncCacheApi,
-  implicit val ec: ExecutionContext,
-  implicit val mat: Materializer) {
+    dbFind: DBFind,
+    dbCreate: DBCreate,
+    dbRemove: DBRemove,
+    cache: SyncCacheApi,
+    implicit val ec: ExecutionContext,
+    implicit val mat: Materializer) {
 
   /**
    * Returns list of all dblist name

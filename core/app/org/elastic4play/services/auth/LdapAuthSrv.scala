@@ -15,9 +15,9 @@ import scala.util.Try
 
 @Singleton
 class LdapAuthSrvFactory @Inject() (
-  configuration: Configuration,
-  userSrv: UserSrv,
-  ec: ExecutionContext) extends AuthSrvFactory { factory ⇒
+    configuration: Configuration,
+    userSrv: UserSrv,
+    ec: ExecutionContext) extends AuthSrvFactory { factory ⇒
   val name = "ldap"
   def getAuthSrv: AuthSrv = new LdapAuthSrv(
     configuration,
@@ -25,14 +25,14 @@ class LdapAuthSrvFactory @Inject() (
     ec)
 
   private class LdapAuthSrv(
-    serverName: String,
-    useSSL: Boolean,
-    bindDN: String,
-    bindPW: String,
-    baseDN: String,
-    filter: String,
-    userSrv: UserSrv,
-    implicit val ec: ExecutionContext) extends AuthSrv {
+      serverName: String,
+      useSSL: Boolean,
+      bindDN: String,
+      bindPW: String,
+      baseDN: String,
+      filter: String,
+      userSrv: UserSrv,
+      implicit val ec: ExecutionContext) extends AuthSrv {
 
     lazy val log = Logger(getClass)
     val name = "ldap"

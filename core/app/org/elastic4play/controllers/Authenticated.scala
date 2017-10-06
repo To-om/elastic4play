@@ -49,13 +49,13 @@ object ExpirationStatus {
  */
 @Singleton
 class Authenticated(
-  maxSessionInactivity: FiniteDuration,
-  sessionWarning: FiniteDuration,
-  sessionUsername: String,
-  userSrv: UserSrv,
-  authSrv: AuthSrv,
-  defaultParser: BodyParsers.Default,
-  implicit val ec: ExecutionContext) {
+    maxSessionInactivity: FiniteDuration,
+    sessionWarning: FiniteDuration,
+    sessionUsername: String,
+    userSrv: UserSrv,
+    authSrv: AuthSrv,
+    defaultParser: BodyParsers.Default,
+    implicit val ec: ExecutionContext) {
 
   @Inject() def this(
     configuration: Configuration,

@@ -15,7 +15,7 @@ class FieldsParserMacro(val c: blackbox.Context) extends MacroUtil {
       .getOrElse(c.abort(c.enclosingPosition, s"Build FieldsParser of $eType fails"))
   }
 
-  private[macros] def _getFieldsParser(symbol: Symbol, eType: Type): Option[Tree] = {
+  private def _getFieldsParser(symbol: Symbol, eType: Type): Option[Tree] = {
     if (eType <:< typeOf[Attachment]) {
       Some(q"org.elastic4play.models.FieldsParser.attachment")
     }
@@ -25,21 +25,21 @@ class FieldsParserMacro(val c: blackbox.Context) extends MacroUtil {
         .orElse(buildParser(eType))
   }
 
-  private[macros] def getParserFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
+  private def getParserFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
     val withParserType = appliedType(weakTypeOf[WithParser[_]], eType)
     (symbol.annotations ::: eType.typeSymbol.annotations)
       .find(_.tree.tpe <:< withParserType)
       .map(annotation ⇒ annotation.tree.children.tail.head)
   }
 
-  private[macros] def getParserFromImplicit(eType: Type): Option[Tree] = {
+  private def getParserFromImplicit(eType: Type): Option[Tree] = {
     val fieldsParserType = appliedType(typeOf[FieldsParser[_]].typeConstructor, eType)
     val fieldsParser = c.inferImplicitValue(fieldsParserType, silent = true)
     if (fieldsParser.tpe =:= NoType) None
     else Some(fieldsParser)
   }
 
-  private[macros] def buildParser(eType: Type): Option[Tree] = {
+  private def buildParser(eType: Type): Option[Tree] = {
     eType match {
       case CaseClassType(paramSymbols @ _*) ⇒
         val companion = eType.typeSymbol.companion
@@ -86,21 +86,21 @@ class FieldsParserMacro(val c: blackbox.Context) extends MacroUtil {
   }
 
 /*************************************************/
-  private[macros] def getUpdateParserFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
+  private def getUpdateParserFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
     val withUpdateParserType = appliedType(weakTypeOf[WithUpdateParser[_]], eType)
     (symbol.annotations ::: eType.typeSymbol.annotations)
       .find(_.tree.tpe <:< withUpdateParserType)
       .map(annotation ⇒ annotation.tree.children.tail.head)
   }
 
-  private[macros] def getUpdateParserFromImplicit(eType: Type): Option[Tree] = {
+  private def getUpdateParserFromImplicit(eType: Type): Option[Tree] = {
     val fieldsParserType = appliedType(typeOf[UpdateFieldsParser[_]].typeConstructor, eType)
     val fieldsParser = c.inferImplicitValue(fieldsParserType, silent = true)
     if (fieldsParser.tpe =:= NoType) None
     else Some(fieldsParser)
   }
 
-  private[macros] def buildUpdateParser(eType: Type): Tree = {
+  private def buildUpdateParser(eType: Type): Tree = {
     val className: String = eType.toString.split("\\.").last
     val updateFieldsParser = _getFieldsParser(eType.typeSymbol, eType)
       .map { parser ⇒
@@ -143,7 +143,7 @@ class FieldsParserMacro(val c: blackbox.Context) extends MacroUtil {
     _getUpdateFieldsParser(eType.typeSymbol, eType)
   }
 
-  private[macros] def _getUpdateFieldsParser(symbol: Symbol, eType: Type): Tree = {
+  private def _getUpdateFieldsParser(symbol: Symbol, eType: Type): Tree = {
     getUpdateParserFromAnnotation(symbol, eType)
       .orElse(getUpdateParserFromImplicit(eType))
       .getOrElse(buildUpdateParser(eType))

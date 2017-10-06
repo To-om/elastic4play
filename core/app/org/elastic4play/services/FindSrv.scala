@@ -308,9 +308,9 @@ object QueryDSL {
 
 @Singleton
 class FindSrv @Inject() (
-  dbFind: DBFind,
-  modelSrv: ModelSrv,
-  implicit val ec: ExecutionContext) {
+    dbFind: DBFind,
+    modelSrv: ModelSrv,
+    implicit val ec: ExecutionContext) {
 
   //def switchTo(db: DBConfiguration) = new FindSrv(db.switchTo(db), modelSrv, ec)
 

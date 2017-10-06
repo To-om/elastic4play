@@ -40,16 +40,16 @@ object DatabaseState {
 
 @Singleton
 class MigrationSrv @Inject() (
-  migration: MigrationOperations,
-  db: DBConfiguration,
-  dbcreate: DBCreate,
-  dbfind: DBFind,
-  dbget: DBGet,
-  dblists: DBLists,
-  modelSrv: ModelSrv,
-  eventSrv: EventSrv,
-  implicit val ec: ExecutionContext,
-  implicit val materializer: Materializer) {
+    migration: MigrationOperations,
+    db: DBConfiguration,
+    dbcreate: DBCreate,
+    dbfind: DBFind,
+    dbget: DBGet,
+    dblists: DBLists,
+    modelSrv: ModelSrv,
+    eventSrv: EventSrv,
+    implicit val ec: ExecutionContext,
+    implicit val materializer: Materializer) {
 
   val log = Logger(getClass)
 

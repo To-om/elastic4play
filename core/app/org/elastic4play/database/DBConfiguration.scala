@@ -34,13 +34,13 @@ import scala.concurrent.{ ExecutionContext, Future, Promise }
  */
 @Singleton
 class DBConfiguration(
-  searchHost: Seq[String],
-  searchCluster: String,
-  baseIndexName: String,
-  lifecycle: ApplicationLifecycle,
-  val version: Int,
-  implicit val ec: ExecutionContext,
-  implicit val actorSystem: ActorSystem) {
+    searchHost: Seq[String],
+    searchCluster: String,
+    baseIndexName: String,
+    lifecycle: ApplicationLifecycle,
+    val version: Int,
+    implicit val ec: ExecutionContext,
+    implicit val actorSystem: ActorSystem) {
 
   @Inject() def this(
     configuration: Configuration,

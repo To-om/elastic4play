@@ -27,9 +27,9 @@ import play.api.mvc.Results.BadRequest
  */
 @Singleton
 class ApiMethod @Inject() (
-  authenticated: Authenticated,
-  actionBuilder: DefaultActionBuilder,
-  implicit val ec: ExecutionContext) {
+    authenticated: Authenticated,
+    actionBuilder: DefaultActionBuilder,
+    implicit val ec: ExecutionContext) {
 
   lazy val logger = Logger(getClass)
 
@@ -52,9 +52,9 @@ class ApiMethod @Inject() (
    * @tparam R type of request (Request of AuthenticatedRequest)
    */
   case class EntryPoint[V <: HList, R[_] <: Request[_]](
-    name: String,
-    fieldsParser: BaseFieldsParser[V],
-    req: Request[AnyContent] ⇒ Future[R[AnyContent]]) {
+      name: String,
+      fieldsParser: BaseFieldsParser[V],
+      req: Request[AnyContent] ⇒ Future[R[AnyContent]]) {
 
     //    /**
     //     * Extract a model from request. This method add the related entity to resulted record (of type V)

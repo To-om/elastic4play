@@ -53,7 +53,6 @@ trait DatabaseMappingMacro extends MacroUtil {
       }
   }
 
-  // DatabaseAdapter.FieldMappingDefinition
   private def getDatabaseFieldMappingFromImplicit(eType: Type): Option[Tree] = {
     val mappingType = appliedType(weakTypeOf[DatabaseAdapter.FieldMappingDefinition[_]].typeConstructor, eType)
     val mapping = c.inferImplicitValue(mappingType, silent = true)
@@ -73,7 +72,7 @@ trait DatabaseMappingMacro extends MacroUtil {
         Some(q"org.elastic4play.models.ESEntityMapping(Map(..$fieldDefinitionMappings)).toFieldMapping")
       case SeqType(subType)    ⇒ Some(getDatabaseFieldMapping(subType.typeSymbol, subType))
       case OptionType(subType) ⇒ Some(getDatabaseFieldMapping(subType.typeSymbol, subType))
-      //case enumeration =>
+      //case enumeration => todo
       case _                   ⇒ None
     }
   }

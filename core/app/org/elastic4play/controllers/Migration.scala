@@ -12,10 +12,10 @@ import scala.concurrent.ExecutionContext
  */
 @Singleton
 class MigrationCtrl @Inject() (
-  components: ControllerComponents,
-  apiMethod: ApiMethod,
-  migrationSrv: MigrationSrv,
-  implicit val ec: ExecutionContext) extends AbstractController(components) {
+    components: ControllerComponents,
+    apiMethod: ApiMethod,
+    migrationSrv: MigrationSrv,
+    implicit val ec: ExecutionContext) extends AbstractController(components) {
 
   def migrate = apiMethod("Migrate database")
     .async { implicit request ⇒

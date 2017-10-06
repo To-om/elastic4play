@@ -20,11 +20,11 @@ import scala.util.{ Failure, Success, Try }
  */
 @Singleton
 class DBFind(
-  pageSize: Int,
-  keepAlive: FiniteDuration,
-  db: DBConfiguration,
-  implicit val ec: ExecutionContext,
-  implicit val mat: Materializer) {
+    pageSize: Int,
+    keepAlive: FiniteDuration,
+    db: DBConfiguration,
+    implicit val ec: ExecutionContext,
+    implicit val mat: Materializer) {
 
   @Inject def this(
     configuration: Configuration,
@@ -147,10 +147,10 @@ class DBFind(
 }
 
 class SearchSource(
-  db: DBConfiguration,
-  searchDefinition: SearchDefinition,
-  keepAliveStr: String,
-  max: Int)(implicit ec: ExecutionContext) extends GraphStageWithMaterializedValue[SourceShape[RichSearchHit], Future[Long]] {
+    db: DBConfiguration,
+    searchDefinition: SearchDefinition,
+    keepAliveStr: String,
+    max: Int)(implicit ec: ExecutionContext) extends GraphStageWithMaterializedValue[SourceShape[RichSearchHit], Future[Long]] {
   val out: Outlet[RichSearchHit] = Outlet("SearchSource")
 
   override val shape: SourceShape[RichSearchHit] = SourceShape(out)

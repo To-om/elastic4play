@@ -2,10 +2,11 @@ package org.elastic4play.macros
 
 import scala.util.Try
 
-import org.scalactic.{ Bad, Good, Or }
+import org.scalactic.{ Bad, Good, One, Or }
 import org.specs2.mutable.Specification
 
-import org.elastic4play.models.{ FNull, FObject, FPath, FString, FieldsParser, UpdateFieldsParser, UpdateOps }
+import org.elastic4play.InvalidFormatAttributeError
+import org.elastic4play.models.{ FNull, FNumber, FObject, FPath, FString, FieldsParser, UpdateFieldsParser, UpdateOps }
 
 class UpdateFieldsParserMacroTest extends Specification with TestUtils {
 
@@ -69,6 +70,14 @@ class UpdateFieldsParserMacroTest extends Specification with TestUtils {
         FPath("subClasses[0].option") → UpdateOps.SetAttribute(3),
         FPath("subClasses[1].option") → UpdateOps.UnsetAttribute)
       fieldsParser(fields) must_=== Good(updates)
+    }
+
+    "return an error if provided fields is not correct" in {
+      val fieldsParser = getUpdateFieldsParser[SimpleClassForFieldsParserMacroTest]
+      val fields = FObject(
+        "name" → FNumber(12)) // invalid format
+
+      fieldsParser(fields) must_=== Bad(One(InvalidFormatAttributeError("name", "string", FNumber(12))))
     }
   }
 }

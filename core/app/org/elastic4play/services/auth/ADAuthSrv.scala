@@ -15,9 +15,9 @@ import scala.util.Try
 
 @Singleton
 class ADAuthSrvFactory @Inject() (
-  configuration: Configuration,
-  userSrv: UserSrv,
-  ec: ExecutionContext) extends AuthSrvFactory { factory ⇒
+    configuration: Configuration,
+    userSrv: UserSrv,
+    ec: ExecutionContext) extends AuthSrvFactory { factory ⇒
   val name = "ad"
   def getAuthSrv: AuthSrv = new ADAuthSrv(
     configuration.get[String]("auth.ad.domainFQDN"),
@@ -27,11 +27,11 @@ class ADAuthSrvFactory @Inject() (
     ec)
 
   private class ADAuthSrv(
-    DomainFQDN: String,
-    domainName: String,
-    useSSL: Boolean,
-    userSrv: UserSrv,
-    implicit val ec: ExecutionContext) extends AuthSrv {
+      DomainFQDN: String,
+      domainName: String,
+      useSSL: Boolean,
+      userSrv: UserSrv,
+      implicit val ec: ExecutionContext) extends AuthSrv {
 
     lazy val log = Logger(getClass)
     val name: String = factory.name

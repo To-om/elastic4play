@@ -56,20 +56,25 @@ trait MacroUtil {
     }
   }
 
-  def traverseEntity[E: WeakTypeTag, A](acc: A)(f: (Tree, Symbol, A) ⇒ (List[(Tree, Symbol)], A)): A = {
+  def symbolToType(symbol: Symbol): Type = {
+    if (symbol.isType) symbol.asType.toType
+    else symbol.typeSignature
+  }
 
-    def unfold(unproccessedSymbols: List[(Tree, Symbol)], intermediateAcc: A)(f: (Tree, Symbol, A) ⇒ (List[(Tree, Symbol)], A)): A = {
-      if (unproccessedSymbols.isEmpty) intermediateAcc
+  def traverseEntity[E: WeakTypeTag, A](init: A)(f: (Tree, Symbol, A) ⇒ (List[(Tree, Symbol)], A)): A = {
+
+    def unfold(pathSymbolQueue: List[(Tree, Symbol)], currentAcc: A)(f: (Tree, Symbol, A) ⇒ (List[(Tree, Symbol)], A)): A = {
+      if (pathSymbolQueue.isEmpty) currentAcc
       else {
-        val (listOfPathSymbol, _a) = unproccessedSymbols.foldLeft[(List[(Tree, Symbol)], A)]((Nil, intermediateAcc)) {
-          case ((ps, a), (path, symbol)) ⇒
-            val (nextSymbols, r) = f(path, symbol, a)
-            (ps ::: nextSymbols) → r
+        val (listOfPathSymbol, nextAcc) = pathSymbolQueue.foldLeft[(List[(Tree, Symbol)], A)]((Nil, currentAcc)) {
+          case ((newPathSymbolQueue, acc), (path, symbol)) ⇒
+            val (nextSymbols, a) = f(path, symbol, acc)
+            (newPathSymbolQueue ::: nextSymbols) → a
         }
-        unfold(listOfPathSymbol, _a)(f)
+        unfold(listOfPathSymbol, nextAcc)(f)
       }
     }
 
-    unfold(List(q"org.elastic4play.models.FPath.empty" → weakTypeOf[E].typeSymbol), acc)(f)
+    unfold(List(q"org.elastic4play.models.FPath.empty" → weakTypeOf[E].typeSymbol), init)(f)
   }
 }

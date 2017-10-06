@@ -11,8 +11,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class DBGet @Inject() (
-  db: DBConfiguration,
-  implicit val ec: ExecutionContext) {
+    db: DBConfiguration,
+    implicit val ec: ExecutionContext) {
 
   /**
    * Retrieve entities from ElasticSearch

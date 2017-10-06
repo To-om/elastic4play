@@ -13,7 +13,7 @@ import com.sksamuel.elastic4s.mappings.FieldDefinition
 import org.elastic4play.macros.ModelMacro
 import org.elastic4play.services.AttachmentSrv
 
-class WithParent(parent: Model) extends StaticAnnotation
+class WithParent[T] extends StaticAnnotation
 class WithParser[T](fieldsParser: FieldsParser[T]) extends StaticAnnotation
 class WithUpdateParser[T](fieldsParsers: UpdateFieldsParser[T]) extends StaticAnnotation
 class WithOutput[T](writes: Writes[T]) extends StaticAnnotation

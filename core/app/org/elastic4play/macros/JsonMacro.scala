@@ -113,7 +113,7 @@ trait JsonMacro extends MacroUtil {
           import play.api.libs.json.{ JsArray, Writes }
           Writes[$eType]((e: $eType) ⇒ JsArray(e.map($writes.writes)))
          """)
-      // case Option
+      // case Option todo
     }
   }
 }

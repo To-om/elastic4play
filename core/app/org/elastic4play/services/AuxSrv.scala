@@ -12,9 +12,9 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class AuxSrv @Inject() (
-  findSrv: FindSrv,
-  implicit val ec: ExecutionContext,
-  implicit val mat: Materializer) {
+    findSrv: FindSrv,
+    implicit val ec: ExecutionContext,
+    implicit val mat: Materializer) {
 
   import org.elastic4play.services.QueryDSL._
 

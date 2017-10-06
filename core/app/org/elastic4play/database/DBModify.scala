@@ -12,8 +12,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class DBModify @Inject() (
-  db: DBConfiguration,
-  implicit val ec: ExecutionContext) {
+    db: DBConfiguration,
+    implicit val ec: ExecutionContext) {
   private[DBModify] lazy val logger = Logger(getClass)
 
   /**

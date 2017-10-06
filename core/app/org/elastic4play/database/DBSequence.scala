@@ -9,8 +9,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class DBSequence @Inject() (
-  db: DBConfiguration,
-  implicit val ec: ExecutionContext) {
+    db: DBConfiguration,
+    implicit val ec: ExecutionContext) {
 
   def next(seqId: String): Future[Int] = {
     db.execute {

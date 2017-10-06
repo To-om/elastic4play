@@ -40,8 +40,8 @@ object MultiAuthSrv {
 
 @Singleton
 class MultiAuthSrv(
-  val authProviders: Seq[AuthSrv],
-  implicit val ec: ExecutionContext) extends AuthSrv {
+    val authProviders: Seq[AuthSrv],
+    implicit val ec: ExecutionContext) extends AuthSrv {
 
   lazy val log = Logger(getClass)
 

@@ -15,24 +15,19 @@ import org.scalactic.{ Bad, Good, One, Or }
 
 @Singleton
 class EntitySrvFactory @Inject() (
-  dbGet: DBGet,
-  dbFind: DBFind,
-  dbCreate: DBCreate,
-  dbModify: DBModify,
-  dbRemove: DBRemove,
-  dbSequence: DBSequence,
-  dbIndex: DBIndex,
-  eventSrv: EventSrv,
-  attachmentSrv: AttachmentSrv,
-  ec: ExecutionContext) {
+    dbGet: DBGet,
+    dbFind: DBFind,
+    dbCreate: DBCreate,
+    dbModify: DBModify,
+    dbRemove: DBRemove,
+    dbSequence: DBSequence,
+    dbIndex: DBIndex,
+    eventSrv: EventSrv,
+    attachmentSrv: AttachmentSrv,
+    ec: ExecutionContext) {
 
-  //  def withParent[E, ACDA <: HList, AUO <: HList](model: Model.Aux[E, ACDA, AUO]) =
-  //    new EntitySrv[E, ACDA, AUO](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithParent[E, ACDA, AUO]
-  //
-  //  def withoutParent[E, ACDA <: HList, AUO <: HList](model: Model.Aux[E, ACDA, AUO]) =
-  //    new EntitySrv[E, ACDA, AUO](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithoutParent[E, ACDA, AUO]
-  //  def withParent[E](model: Model.Base[E]) =
-  //    new EntitySrv[E](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithParent[E]
+  def withParent[E](model: Model.Base[E]) =
+    new EntitySrv[E](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithParent[E]
 
   def withoutParent[E](model: Model.Base[E]) =
     new EntitySrv[E](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithoutParent[E]
@@ -41,12 +36,6 @@ class EntitySrvFactory @Inject() (
 
 trait CreatorWithoutParent[E] {
   _: EntitySrv[E] ⇒
-
-  //  @deprecated("Use create(e: E) after transforming the record in E", "2.0.0")
-  //  def create[L <: HList](record: Record[L])(implicit authContext: AuthContext): Future[E with Entity] = macro ServiceMacros.create
-  //
-  //  @deprecated("Use create(e: E) after transforming the record in E", "2.0.0")
-  //  def createOps[L <: HList](record: Record[L])(operations: RecordOps[L] ⇒ FieldOps[_]*)(implicit authContext: AuthContext): Future[E with Entity] = macro ServiceMacros.createWithOps[L]
 
   def create(e: E)(implicit authContext: AuthContext): Future[E with Entity] = {
     for {
@@ -80,23 +69,20 @@ trait CreatorWithParent[E] {
         AuditOperation.create(entity, json)(authContext))
     } yield entity
   }
-  //  def create[L <: HList](parent: Entity, record: Record[L])(implicit authContext: AuthContext): Future[E with Entity] = macro ServiceMacros.createWithParent
-  //
-  //  def createOps[L <: HList](parent: Entity, record: Record[L])(operations: RecordOps[L] ⇒ FieldOps[_]*)(implicit authContext: AuthContext): Future[E with Entity] = macro ServiceMacros.createWithParentAndOps[L]
 }
 
 class EntitySrv[E](
-  val model: Model.Base[E],
-  dbGet: DBGet,
-  dbFind: DBFind,
-  val dbCreate: DBCreate,
-  val dbModify: DBModify,
-  dbRemove: DBRemove,
-  dbSequence: DBSequence,
-  dbIndex: DBIndex,
-  val eventSrv: EventSrv,
-  val attachmentSrv: AttachmentSrv,
-  implicit val ec: ExecutionContext) {
+    val model: Model.Base[E],
+    dbGet: DBGet,
+    dbFind: DBFind,
+    val dbCreate: DBCreate,
+    val dbModify: DBModify,
+    dbRemove: DBRemove,
+    dbSequence: DBSequence,
+    dbIndex: DBIndex,
+    val eventSrv: EventSrv,
+    val attachmentSrv: AttachmentSrv,
+    implicit val ec: ExecutionContext) {
 
   def saveAttachments(entity: E): Future[E] = model.saveAttachment(attachmentSrv, entity)
 

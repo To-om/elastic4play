@@ -23,12 +23,11 @@ trait DatabaseReadsMacro extends MacroUtil {
 
   private def getDatabaseReadsFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
     val withDatabaseType = appliedType(typeOf[WithDatabase[_]], eType)
-    symbol.annotations
+    (symbol.annotations ::: eType.typeSymbol.annotations)
       .find(_.tree.tpe <:< withDatabaseType)
       .map(annotation ⇒ annotation.tree.children.tail.head)
   }
 
-  // => DatabaseReads[_]
   private def getDatabaseReadsFromImplicit(eType: Type): Option[Tree] = {
     val databaseReadsType = appliedType(typeOf[DatabaseReads[_]], eType)
     val databaseReads = c.inferImplicitValue(databaseReadsType, silent = true)

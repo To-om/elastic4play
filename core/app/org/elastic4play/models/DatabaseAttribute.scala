@@ -107,9 +107,32 @@ object DatabaseReads {
   }
 }
 
-abstract class DatabaseWrites[T] extends (T ⇒ Try[DatabaseAdapter.DatabaseFormat])
+abstract class DatabaseWrites[T] extends (T ⇒ Try[DatabaseAdapter.DatabaseFormat]) { dw ⇒
+  def optional: DatabaseWrites[Option[T]] = new DatabaseWrites[Option[T]] {
+    def apply(ot: Option[T]) = {
+      ot.map(dw.apply)
+        .getOrElse(Success(None))
+    }
+  }
+  def sequence: DatabaseWrites[Seq[T]] = new DatabaseWrites[Seq[T]] {
+    def apply(ts: Seq[T]) = {
+      ts.map(dw.apply)
+        .foldLeft[Try[Seq[JsValue]]](Success(Nil)) {
+          case (Success(acc), Success(Some(v))) ⇒ Success(acc :+ v)
+          case (Failure(f), _)                  ⇒ Failure(f)
+          case (_, Failure(f))                  ⇒ Failure(f)
+          case (acc, _)                         ⇒ acc
+        }
+        .map(s ⇒ Some(JsArray(s)))
+    }
+  }
+}
 
 object DatabaseWrites {
+  def apply[T](f: T ⇒ Try[DatabaseAdapter.DatabaseFormat]): DatabaseWrites[T] = new DatabaseWrites[T] {
+    def apply(t: T): Try[DatabaseAdapter.DatabaseFormat] = f(t)
+  }
+
   implicit def fromJsonWrites[T](w: Writes[T]): DatabaseWrites[T] = new DatabaseWrites[T] {
     def apply(t: T): Try[DatabaseAdapter.DatabaseFormat] = t match {
       case None ⇒ Success(None)

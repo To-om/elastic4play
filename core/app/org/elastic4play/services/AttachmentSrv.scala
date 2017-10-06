@@ -19,13 +19,13 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class AttachmentSrv(
-  mainHash: String,
-  extraHashes: Seq[String],
-  chunkSize: Int,
-  dbCreate: DBCreate,
-  dbGet: DBGet,
-  implicit val ec: ExecutionContext,
-  implicit val mat: Materializer) {
+    mainHash: String,
+    extraHashes: Seq[String],
+    chunkSize: Int,
+    dbCreate: DBCreate,
+    dbGet: DBGet,
+    implicit val ec: ExecutionContext,
+    implicit val mat: Materializer) {
 
   //val model = Model(classOf[AttachmentChunk])
 

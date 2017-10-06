@@ -14,29 +14,29 @@ trait DatabaseWritesMacro extends MacroUtil {
     _getDatabaseWrites(eType.typeSymbol, eType)
   }
 
-  def _getDatabaseWrites(symbol: Symbol, eType: Type): Tree = {
+  private def _getDatabaseWrites(symbol: Symbol, eType: Type): Tree = {
     getDatabaseWritesFromAnnotation(symbol, eType)
       .orElse(getDatabaseWritesFromImplicit(eType))
       .orElse(buildDatabaseWrites(eType))
       .getOrElse(c.abort(c.enclosingPosition, s"no writes found for $eType"))
   }
 
-  def getDatabaseWritesFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
+  private def getDatabaseWritesFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
     val withDatabaseType = appliedType(typeOf[WithDatabase[_]], eType)
-    symbol.annotations
+    (symbol.annotations ::: eType.typeSymbol.annotations)
       .find(_.tree.tpe <:< withDatabaseType)
       .map(annotation ⇒ annotation.tree.children.tail.tail.head)
   }
 
-  def getDatabaseWritesFromImplicit(eType: Type): Option[Tree] = {
+  private def getDatabaseWritesFromImplicit(eType: Type): Option[Tree] = {
     val databaseWritesType = appliedType(weakTypeOf[DatabaseWrites[_]].typeConstructor, eType)
     val databaseWrites = c.inferImplicitValue(databaseWritesType, silent = true)
     if (databaseWrites.tpe =:= NoType) None
     else Some(databaseWrites)
   }
 
-  def buildDatabaseWrites(eType: Type): Option[Tree] = {
-    eType.typeSymbol match {
+  private def buildDatabaseWrites(eType: Type): Option[Tree] = {
+    eType match {
       case CaseClassType(symbols @ _*) ⇒
         val patterns = symbols.map { symbol ⇒
           val symbolName = symbol.name.toString
@@ -45,49 +45,51 @@ trait DatabaseWritesMacro extends MacroUtil {
           pat → fq"$pat <- $writes(e.${TermName(symbolName)}).map(_.map($symbolName -> _))"
         }
         Some(q"""
-                   (e: $eType) ⇒
+                 import scala.util.Try
+                 import org.elastic4play.models.{ DatabaseWrites, DatabaseAdapter }
+
+                 new DatabaseWrites[$eType] {
+                   def apply(e: $eType): Try[DatabaseAdapter.DatabaseFormat] =
                      for(..${patterns.map(_._2)}) yield Some(play.api.libs.json.JsObject(Seq(..${patterns.map(_._1)}).flatten))
+                 }
                  """)
       case SeqType(subType) ⇒
         val databaseWrites = _getDatabaseWrites(subType.typeSymbol, subType)
-        Some(q"""
-                import scala.util.{ Try, Success, Failure }
-                import play.api.libs.json.{ JsValue, JsArray }
-
-                (es: $eType) ⇒
-                  es
-                    .map($databaseWrites.apply)
-                    .foldLeft[Try[Seq[JsValue]]](Success(Nil)) {
-                      case (Success(acc), Success(Some(v))) ⇒ Success(acc :+ v)
-                      case (Failure(f), _)                  ⇒ Failure(f)
-                      case (_, Failure(f))                  ⇒ Failure(f)
-                      case (acc, _)                         ⇒ acc
-                    }
-                    .map(s ⇒ Some(JsArray(s)))
-               """)
-      // case Option
+        Some(q"$databaseWrites.sequence")
+      case OptionType(subType) ⇒
+        val databaseWrites = _getDatabaseWrites(subType.typeSymbol, subType)
+        Some(q"$databaseWrites.optional")
+      case _ ⇒ None
     }
   }
 
   def databaseMaps[E: WeakTypeTag]: Tree = {
-    traverseEntity[E, Tree](q"Map.empty[org.elastic4play.models.FPath, org.elastic4play.models.DatabaseWrites[_]]") {
-      case (path, symbol, m) ⇒
-        val symbolDatabaseWrites = getDatabaseWritesFromAnnotation(symbol, symbol.typeSignature)
-          .orElse(getDatabaseWritesFromImplicit(symbol.typeSignature))
-          .fold(m) { databaseWrites ⇒ q"$m.updated($path, $databaseWrites)" }
-
-        val nextSymbols = symbol match {
-          case CaseClassType(subSymbols @ _*) ⇒
-            subSymbols
-              .map { s ⇒
-                val sName = s.name.toString
-                q"$path / $sName" → s
-              }
-              .toList
-          case _ ⇒ Nil
-        }
-
-        nextSymbols → symbolDatabaseWrites
+    def nextSymbol(path: Tree, tpe: Type): List[(Tree, Symbol)] = {
+      tpe match {
+        case CaseClassType(subSymbols @ _*) ⇒
+          subSymbols
+            .map { s ⇒
+              val sName = s.name.toString
+              q"$path / $sName" → s
+            }
+            .toList
+        case SeqType(subType)    ⇒ (q"$path.toSeq", subType.typeSymbol) :: nextSymbol(q"$path.toSeq", subType)
+        case OptionType(subType) ⇒ nextSymbol(path, subType)
+        case _                   ⇒ Nil
+      }
     }
+
+    val databaseWritesList = traverseEntity[E, Seq[Tree]](Nil) {
+      case (path, symbol, m) ⇒
+        val symbolType = symbolToType(symbol)
+        val symbolDatabaseWrites = getDatabaseWritesFromAnnotation(symbol, symbolType)
+          .orElse(getDatabaseWritesFromImplicit(symbolType))
+          .orElse(buildDatabaseWrites(symbolType))
+          .fold(m) { databaseWrites ⇒ m :+ q"$path -> $databaseWrites" }
+
+        val ns = nextSymbol(path, symbolType)
+        ns → symbolDatabaseWrites
+    }
+    q"Seq(..$databaseWritesList).toMap - org.elastic4play.models.FPath.empty"
   }
 }

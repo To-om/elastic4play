@@ -15,8 +15,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class TempSrv @Inject() (
-  lifecycle: ApplicationLifecycle,
-  implicit val ec: ExecutionContext) {
+    lifecycle: ApplicationLifecycle,
+    implicit val ec: ExecutionContext) {
 
   lazy val log = Logger(getClass)
 
@@ -62,9 +62,9 @@ class TempSrv @Inject() (
 }
 
 class TempFilter @Inject() (
-  tempSrv: TempSrv,
-  implicit val ec: ExecutionContext,
-  implicit val mat: Materializer) extends Filter {
+    tempSrv: TempSrv,
+    implicit val ec: ExecutionContext,
+    implicit val mat: Materializer) extends Filter {
   def apply(nextFilter: RequestHeader ⇒ Future[Result])(requestHeader: RequestHeader): Future[Result] = {
     nextFilter(requestHeader)
       .andThen { case _ ⇒ tempSrv.releaseTemporaryFiles(requestHeader) }

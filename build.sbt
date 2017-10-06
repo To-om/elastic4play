@@ -26,12 +26,13 @@ lazy val elastic4play = (project in file("core"))
     Dependencies.Library.Play.specs2 % Test))
 
 
-lazy val elastic4playTest = (project in file("."))
+lazy val elastic4playTest = (project in file("elastic4playTest"))
   .enablePlugins(PlayScala)
   .disablePlugins(PlayLogback)
   .aggregate(elastic4play)
   .dependsOn(elastic4play)
   .dependsOn(elastic4play % "test->test")
+  .settings(publish := {})
   .settings(libraryDependencies ++= Seq(
     Library.Play.specs2 % Test,
     Library.Elastic4s.testkit))

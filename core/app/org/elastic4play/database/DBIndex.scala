@@ -12,8 +12,8 @@ import scala.concurrent.{ ExecutionContext, Future, blocking }
 
 @Singleton
 class DBIndex @Inject() (
-  db: DBConfiguration,
-  implicit val ec: ExecutionContext) {
+    db: DBConfiguration,
+    implicit val ec: ExecutionContext) {
 
   private[DBIndex] lazy val logger = Logger(getClass)
 
