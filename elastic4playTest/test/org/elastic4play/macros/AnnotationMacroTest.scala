@@ -16,9 +16,10 @@ class AnnotationMacroTest extends Specification with TestUtils with Mockito {
       case class MyDTO(s: String, i: Int, u: String) {
         def _e = s
         def _d = i.toDouble
+        def _u = s"__${u}__"
       }
 
-      MyDTO("sParam", 42, "uParam").toMyEntity must_=== MyEntity("uParam", "sParam", 42.0)
+      MyDTO("sParam", 42, "uParam").toMyEntity must_=== MyEntity("__uParam__", "sParam", 42.0)
     }
 
     "create model companion" in {

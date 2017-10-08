@@ -20,15 +20,15 @@ class ModelMacro(val c: blackbox.Context)
     val className: String = entityType.toString.split("\\.").last
     val modelName: String = Character.toLowerCase(className.charAt(0)) + className.substring(1)
 
+
     val withParentType = weakTypeOf[WithParent[_]]
-    val parents = entityType.typeSymbol.annotations
+    val parentClass = entityType.typeSymbol.annotations
       .collectFirst {
         case annotation if annotation.tree.tpe <:< withParentType ⇒
           val TypeRef(_, _, List(parentEntityType)) = annotation.tree.tpe
-          val parentName = TermName(parentEntityType.toString)
-          q"$parentName.model +: $parentName.model.parents"
+          q"Some(classOf[$parentEntityType])"
       }
-      .getOrElse(q"Nil")
+      .getOrElse(q"None")
 
     c.Expr[Model.Base[E]](
       q"""
@@ -42,7 +42,7 @@ class ModelMacro(val c: blackbox.Context)
           type E = $entityType
 
           val name = $modelName
-          lazy val parents = $parents
+          val parentClass = $parentClass
 
           val databaseMapping = ${getDatabaseEntityMapping[E]}
           val databaseReads = ${getDatabaseReads[E]}.andMap { (maybeJson, e) ⇒

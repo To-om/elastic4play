@@ -45,8 +45,17 @@ object Model {
 abstract class Model {
   type E
 
+  val parentClass: Option[Class[_]]
   val name: String
-  val parents: Seq[Model]
+  lazy val parents: List[Model] = parentClass.fold[List[Model]](Nil) { pc =>
+    import scala.reflect.runtime._
+    val rootMirror = universe.runtimeMirror(getClass.getClassLoader)
+    val classSymbol = rootMirror.classSymbol(pc)
+    val classMirror = rootMirror.reflectModule(classSymbol.companion.asModule)
+    val parentInstance = classMirror.instance
+    val parentModel = parentInstance.getClass.getDeclaredMethod("model").invoke(parentInstance).asInstanceOf[Model]
+    parentModel :: parentModel.parents
+  }
 
   val databaseMapping: Map[String, DatabaseAdapter.EntityMappingDefinition]
   val databaseReads: DatabaseReads[E with Entity]
@@ -59,5 +68,5 @@ abstract class Model {
 
   def saveAttachment(attachmentSrv: AttachmentSrv, e: E)(implicit ec: ExecutionContext): Future[E]
   def saveUpdateAttachment(attachmentSrv: AttachmentSrv, updates: Map[FPath, UpdateOps.Type])(implicit ec: ExecutionContext): Future[Map[FPath, UpdateOps.Type]]
-  val databaseMaps: Map[FPath, DatabaseWrites[_]] //(updates: Map[FPath, UpdateOps.Type]): Map[FPath, UpdateOps.DBType]
+  val databaseMaps: Map[FPath, DatabaseWrites[_]]
 }

@@ -18,10 +18,12 @@ class AnnotationMacro(val c: whitebox.Context) extends MacroUtil {
 
     annottees.toList match {
       case ClassDef(classMods, className, _, classTemplate) :: _ if classMods.hasFlag(Flag.CASE) ⇒
-        val availableFields = classTemplate.body.collect {
+        val availableFields = classTemplate.body
+          .collect {
           case ValDef(valMods, fieldName, _, _) if valMods.hasFlag(Flag.CASEACCESSOR) ⇒ fieldName
           case DefDef(_, fieldName, _, _, _, _) if fieldName.toString.startsWith("_") ⇒ fieldName
         }
+          .reverse
 
         val params = targetType match {
           case CaseClassType(symbols @ _*) ⇒ symbols.map { s ⇒
