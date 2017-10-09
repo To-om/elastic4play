@@ -68,10 +68,10 @@ trait JsonMacro extends MacroUtil {
       """
   }
 
-  //  def getJsonWrites[E: WeakTypeTag]: Tree = {
-  //    val eType = weakTypeOf[E]
-  //    _getJsonWrites(eType.typeSymbol, eType)
-  //  }
+    def getJsonWrites[E: WeakTypeTag]: Tree = {
+      val eType = weakTypeOf[E]
+      _getJsonWrites(eType.typeSymbol, eType)
+    }
 
   private def _getJsonWrites(symbol: Symbol, eType: Type): Tree = {
     getJsonWritesFromAnnotation(symbol, eType)

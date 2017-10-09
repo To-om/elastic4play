@@ -93,14 +93,12 @@ class RecordMacro(val c: whitebox.Context) {
 
   def mkSelector[L <: HList, K](implicit lTag: WeakTypeTag[L], kTag: WeakTypeTag[K]): Tree = {
     def unfold(list: Type, key: Type): Option[(Type, Int)] = {
-      val x = list match {
+      list match {
         case l if l <:< typeOf[HNil]      ⇒ None
         case Record(k, v, _) if k =:= key ⇒ Some(v → 0)
         case Record(_, _, tail)           ⇒ unfold(tail, key).map { case (_v, i) ⇒ _v → (i + 1) }
         case l                            ⇒ c.abort(c.enclosingPosition, s"$l is not an HList type")
       }
-      println(s"unfold($list, $key) => $x")
-      x
     }
 
     val lTpe = lTag.tpe.dealias

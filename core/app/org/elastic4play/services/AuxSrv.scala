@@ -20,38 +20,28 @@ class AuxSrv @Inject() (
 
   private[services] val logger = Logger(getClass)
 
-  def apply(entity: Entity, nparent: Int, withStats: Boolean): Future[JsObject] = {
-
-    val entityWithParent = entity._parent match {
-      case None ⇒ Future.successful(entity.toJson)
-      case Some(parentId) if nparent > 0 ⇒
-
-        val parentModel = entity._model.parents.head
-        findSrv(Some(parentModel.name), withId(parentId), Some("0-1"), Nil)
-          .mapAsync(1) { parent ⇒
-            apply(parent, nparent - 1, withStats).map { parent ⇒
-              entity.toJson + (parentModel.name → parent)
+  def getParents(entity: Entity, n: Int): Future[Seq[Entity]] = {
+    if (n <= 0) Future.successful(Nil)
+    else {
+      entity._model.parents
+        .take(n)
+        .foldLeft[Future[(Option[String], List[Entity])]](Future.successful(entity._parent -> Nil)) { (idEntities, model) ⇒
+          for {
+            (maybeEntityId, entities) ← idEntities
+            maybeParent ← maybeEntityId.fold[Future[Option[Entity]]](Future.successful(None)) { entityId ⇒
+              findSrv(Some(model.name), withId(entityId), Some("0-1"), Nil).runWith(Sink.headOption)
             }
+          } yield maybeParent.fold[(Option[String], List[Entity])](None -> entities) { parent ⇒
+            Some(parent._id) -> (parent +: entities)
           }
-          .runWith(Sink.headOption)
-          .map(_.getOrElse {
-            logger.warn(s"Child entity ($entity) has no parent !")
-            JsObject(Nil)
-          })
+        }
+        .map(_._2)
     }
-
-    //    if (withStats) {
-    //      for {
-    //        e ← entityWithParent
-    //        model = entity._model
-    //        s ← model.getStats(entity.asInstanceOf[model.E])
-    //      } yield e + ("stats" → s)
-    //    }
-    //    else entityWithParent
-    entityWithParent
   }
 
-  def apply[A, E <: Entity](entities: Source[E, A], nparent: Int, withStats: Boolean): Source[JsObject, A] = {
-    entities.mapAsync(5) { entity ⇒ apply(entity, nparent, withStats) }
+  def apply[A, E <: Entity](entities: Source[E, A], nparent: Int, withStats: Boolean): Source[Seq[Entity], A] = {
+    entities.mapAsync(5) {
+      entity ⇒ getParents(entity, nparent)
+    }
   }
 }

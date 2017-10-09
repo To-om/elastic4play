@@ -5,31 +5,11 @@ import java.util.Date
 import com.sksamuel.elastic4s.ElasticDsl.{ booleanField, dateField, intField, longField, objectField }
 import com.sksamuel.elastic4s.mappings.{ FieldDefinition, TextFieldDefinition }
 
-import org.elastic4play.models.DatabaseAdapter.FieldMappingDefinition
 import play.api.libs.json._
-import scala.reflect.ClassTag
 import scala.util.{ Failure, Success, Try }
 import scala.language.implicitConversions
 
 import org.elastic4play.InternalError
-
-/**
- * Database attribute defines how an attribute is stored in database and how it is converted
- *
- * @param name    name of the attribute
- * @param format  JSON format. Read is used to retrieve value from database. Write is used to store it in base
- * @param mapping Option used to describe it in database
- * @tparam T native type of the attribute
- */
-case class DatabaseAttribute[T](name: String, format: Format[T], mapping: FieldDefinition) {
-  def toDatabase(t: T): JsValue = format.writes(t)
-
-  def fromDatabase(json: JsValue): JsResult[T] = format.reads(json)
-
-  def seq: DatabaseAttribute[Seq[T]] = DatabaseAttribute(name, Format(Reads.seq(format), Writes.seq(format)), mapping)
-
-  def option: DatabaseAttribute[Option[T]] = DatabaseAttribute(name, Format(Reads.optionWithNull(format), Writes.optionWithNull(format)), mapping)
-}
 
 case class ESFieldMapping[T](mapping: String ⇒ FieldDefinition)
 
@@ -43,10 +23,6 @@ object ESFieldMapping {
   implicit val longMapping: ESFieldMapping[Long] = ESFieldMapping[Long](longField)
   implicit val intMapping: ESFieldMapping[Int] = ESFieldMapping[Int](intField)
   implicit val attachmentMapping: ESFieldMapping[Attachment] = ESFieldMapping[Attachment](objectField)
-
-  def jsObjectMapping(attributes: Seq[DatabaseAttribute[_]]): ESFieldMapping[JsObject] = ESFieldMapping[JsObject] { name ⇒
-    objectField(name).fields(attributes.map(_.mapping))
-  }
 
   implicit val dateMapping: ESFieldMapping[Date] = ESFieldMapping[Date](dateField)
 
@@ -67,16 +43,6 @@ case class ESEntityMapping(fields: Map[String, ESFieldMapping[_]]) {
         case (fieldName, fieldMapping) ⇒ fieldMapping.mapping(fieldName)
       })
     }
-  }
-}
-
-trait OClass
-
-case class OFieldMapping[T](createProperty: (OClass, String) ⇒ Unit, requiredClasses: Seq[Class[_]])
-
-case class OEntityMapping[T](fields: Map[String, FieldMappingDefinition[_]])(implicit classTag: ClassTag[T]) {
-  def toFieldMapping: OFieldMapping[T] = {
-    OFieldMapping[T]((_, _) ⇒ /* create an embedded property */ (), Seq(classTag.runtimeClass))
   }
 }
 
@@ -109,13 +75,13 @@ object DatabaseReads {
 
 abstract class DatabaseWrites[T] extends (T ⇒ Try[DatabaseAdapter.DatabaseFormat]) { dw ⇒
   def optional: DatabaseWrites[Option[T]] = new DatabaseWrites[Option[T]] {
-    def apply(ot: Option[T]) = {
+    def apply(ot: Option[T]): Try[DatabaseAdapter.DatabaseFormat] = {
       ot.map(dw.apply)
         .getOrElse(Success(None))
     }
   }
   def sequence: DatabaseWrites[Seq[T]] = new DatabaseWrites[Seq[T]] {
-    def apply(ts: Seq[T]) = {
+    def apply(ts: Seq[T]): Try[Some[JsArray]] = {
       ts.map(dw.apply)
         .foldLeft[Try[Seq[JsValue]]](Success(Nil)) {
           case (Success(acc), Success(Some(v))) ⇒ Success(acc :+ v)

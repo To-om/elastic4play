@@ -42,15 +42,9 @@ trait DatabaseMappingMacro extends MacroUtil {
    */
   private def getDatabaseFieldMappingFromAnnotation(symbol: Symbol, eType: Type): Option[Tree] = {
     val withFieldMappingTpe = appliedType(weakTypeOf[WithFieldMapping[_]].typeConstructor, eType)
-    symbol.annotations
-      .find(_.tree.tpe =:= withFieldMappingTpe)
-      .map { annotation ⇒
-        val fieldDefinitionMapping = c.typecheck(annotation.tree.children.tail.head)
-        if (fieldDefinitionMapping.tpe <:< weakTypeOf[DatabaseAdapter.FieldMappingDefinition[_]])
-          fieldDefinitionMapping
-        else
-          c.abort(c.enclosingPosition, s"Mapping of $eType is not a FieldDefinition (found $fieldDefinitionMapping: ${fieldDefinitionMapping.tpe})")
-      }
+    (symbol.annotations ::: eType.typeSymbol.annotations)
+      .find(_.tree.tpe <:< withFieldMappingTpe)
+      .map(annotation ⇒ annotation.tree.children.tail.head)
   }
 
   private def getDatabaseFieldMappingFromImplicit(eType: Type): Option[Tree] = {

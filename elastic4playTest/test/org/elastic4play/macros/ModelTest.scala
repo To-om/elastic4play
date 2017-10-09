@@ -24,7 +24,7 @@ case class Parent(name: String)
 @WithParent[Parent]
 case class Child(name: String, attachment: Attachment)
 
-class ModelTest  extends Specification with TestUtils with Mockito {
+class ModelTest extends Specification with TestUtils with Mockito {
 
   "model" should {
     "have parents" in {
@@ -39,14 +39,12 @@ class ModelTest  extends Specification with TestUtils with Mockito {
           "hashes" -> Json.arr("deadbeef01", "deadbeef02"),
           "size" -> 453,
           "contentType" -> "text/plain",
-          "id" -> "attachmentId"
-        ),
+          "id" -> "attachmentId"),
         "_id" -> "child_id",
         "_routing" -> "child_routing",
         "_parent" -> "parent_id",
         "_createdAt" -> 1507468476321L,
-      "_createdBy" -> "me"
-      )
+        "_createdBy" -> "me")
       val expectedChild = new Child("childEntity", FAttachment("filename.txt", Seq(Hash("deadbeef01"), Hash("deadbeef02")), 453L, "text/plain", "attachmentId")) with Entity {
         val _id = "child_id"
         val _routing = "child_routing"
@@ -66,7 +64,7 @@ class ModelTest  extends Specification with TestUtils with Mockito {
 
       val file = FFile("filename.txt", Paths.get("/tmp/xxx.tmp"), "text/plain")
       val attachment = FAttachment("filename.txt", Seq(Hash("deadbeef01"), Hash("deadbeef02")), 453L, "text/plain", "attachmentId")
-      val child = Child("childEntity",       file)
+      val child = Child("childEntity", file)
       val attachmentSrv = mock[AttachmentSrv]
 
       val expectedChild = Child("childEntity", attachment)

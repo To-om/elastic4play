@@ -32,7 +32,6 @@ trait Entity {
   val _updatedBy: Option[String]
   val _createdAt: Date
   val _updatedAt: Option[Date]
-  def toJson: JsObject = _model.writes.writes(this.asInstanceOf[_model.E with Entity]).as[JsObject]
 }
 
 object Model {
@@ -47,7 +46,7 @@ abstract class Model {
 
   val parentClass: Option[Class[_]]
   val name: String
-  lazy val parents: List[Model] = parentClass.fold[List[Model]](Nil) { pc =>
+  lazy val parents: List[Model] = parentClass.fold[List[Model]](Nil) { pc ⇒
     import scala.reflect.runtime._
     val rootMirror = universe.runtimeMirror(getClass.getClassLoader)
     val classSymbol = rootMirror.classSymbol(pc)
@@ -60,9 +59,6 @@ abstract class Model {
   val databaseMapping: Map[String, DatabaseAdapter.EntityMappingDefinition]
   val databaseReads: DatabaseReads[E with Entity]
   val databaseWrites: DatabaseWrites[E]
-
-  val writes: OWrites[E with Entity]
-  def toOutput(e: E with Entity): JsObject = writes.writes(e)
 
   def computedMetrics: Map[String, String] = ???
 

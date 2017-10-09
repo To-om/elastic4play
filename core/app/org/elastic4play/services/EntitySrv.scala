@@ -3,13 +3,15 @@ package org.elastic4play.services
 import javax.inject.{ Inject, Singleton }
 
 import akka.stream.scaladsl.Source
+
 import org.elastic4play.{ InternalError, NotFoundError, UnknownAttributeError }
 import org.elastic4play.database._
 import org.elastic4play.models.{ DatabaseWrites, Entity, FNull, FPath, Model, UpdateOps }
 import org.elasticsearch.action.search.SearchType
 import play.api.libs.json.JsObject
-
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.reflect.runtime.{ universe ⇒ ru }
+
 import org.scalactic.Accumulation._
 import org.scalactic.{ Bad, Good, One, Or }
 
@@ -26,11 +28,23 @@ class EntitySrvFactory @Inject() (
     attachmentSrv: AttachmentSrv,
     ec: ExecutionContext) {
 
-  def withParent[E](model: Model.Base[E]) =
-    new EntitySrv[E](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithParent[E]
+  private lazy val rootMirror = ru.runtimeMirror(getClass.getClassLoader)
 
-  def withoutParent[E](model: Model.Base[E]) =
-    new EntitySrv[E](model, dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithoutParent[E]
+  private def getModel[E](implicit eTag: ru.TypeTag[E]) = {
+    val classMirror = rootMirror.reflectClass(eTag.tpe.typeSymbol.asClass)
+    val companionSymbol = classMirror.symbol.companion
+    val companionInstance = rootMirror.reflectModule(companionSymbol.asModule)
+    val companionMirror = rootMirror.reflect(companionInstance.instance)
+    val fieldSymbol = companionSymbol.typeSignature.decl(ru.TermName("model")).asTerm
+    val fieldMirror = companionMirror.reflectField(fieldSymbol)
+    fieldMirror.get.asInstanceOf[Model.Base[E]]
+  }
+
+  def withParent[E](implicit eTag: ru.TypeTag[E]) =
+    new EntitySrv[E](getModel[E], dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithParent[E]
+
+  def withoutParent[E](implicit eTag: ru.TypeTag[E]) =
+    new EntitySrv[E](getModel[E], dbGet, dbFind, dbCreate, dbModify, dbRemove, dbSequence, dbIndex, eventSrv, attachmentSrv, ec) with CreatorWithoutParent[E]
 
 }
 

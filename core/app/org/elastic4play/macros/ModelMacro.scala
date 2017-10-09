@@ -20,7 +20,6 @@ class ModelMacro(val c: blackbox.Context)
     val className: String = entityType.toString.split("\\.").last
     val modelName: String = Character.toLowerCase(className.charAt(0)) + className.substring(1)
 
-
     val withParentType = weakTypeOf[WithParent[_]]
     val parentClass = entityType.typeSymbol.annotations
       .collectFirst {
@@ -52,7 +51,6 @@ class ModelMacro(val c: blackbox.Context)
           }
           val databaseWrites = ${getDatabaseWrites[E]}
 
-          val writes = ${getEntityJsonWrites[E]}
           override def computedMetrics: Map[String, String] = ???
 
           def saveAttachment(attachmentSrv: AttachmentSrv, e: E)(implicit ec: ExecutionContext): Future[E] = {

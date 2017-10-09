@@ -11,6 +11,11 @@ class TransformInto[T] extends StaticAnnotation {
 }
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
+class TransformFrom[T] extends StaticAnnotation {
+  def macroTransform(annottees: Any*): Any = macro AnnotationMacro.transformFromImpl
+}
+
+@compileTimeOnly("enable macro paradise to expand macro annotations")
 class EntityModel extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro AnnotationMacro.modelImpl
 }
