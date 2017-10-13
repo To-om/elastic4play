@@ -7,7 +7,7 @@ import play.api.libs.json.{ JsNull, JsObject, Json }
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 
-import org.elastic4play.models._
+import org.elastic4play.models.{ JsonOutput, _ }
 
 class AnnotationMacroTest extends Specification with TestUtils with Mockito {
 
@@ -58,11 +58,11 @@ class AnnotationMacroTest extends Specification with TestUtils with Mockito {
         "i" -> 42,
         "u" -> "uParam",
         "v" -> true)
-      Json.toJson(MyDTO("sParam", 42, "uParam", true)).as[JsObject].fields must containTheSameElementsAs(expectedOutput.fields)
+      MyDTO("sParam", 42, "uParam", true).toJson.fields must containTheSameElementsAs(expectedOutput.fields)
     }
 
     "output entity" in {
-      @EntityJsonOutput
+      @JsonOutput
       case class MyOtherEntity(u: String, e: String, d: Double, v: Boolean)
       val myEntity = new MyOtherEntity("uParam", "eParam", 42.1, true) with Entity {
         val _id = "entityId"
@@ -86,8 +86,8 @@ class AnnotationMacroTest extends Specification with TestUtils with Mockito {
         "_createdBy" -> "me",
         "_updatedAt" -> JsNull,
         "_updatedBy" -> JsNull,
-        "_type" -> "myOtherEntity")
-      Json.toJson(myEntity).as[JsObject].fields must containTheSameElementsAs(expectedOutput.fields)
+        "_type" -> "MyOtherEntity")
+      myEntity.toJson(myEntity).fields must containTheSameElementsAs(expectedOutput.fields)
     }
   }
 }

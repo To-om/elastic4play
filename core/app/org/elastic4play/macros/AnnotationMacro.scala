@@ -117,39 +117,26 @@ class AnnotationMacro(val c: whitebox.Context) extends MacroUtil {
 
   def outputImpl(annottees: Tree*): Tree = {
     annottees.toList match {
-      case (outputClass @ ClassDef(classMods, className, Nil, _)) :: tail if classMods.hasFlag(Flag.CASE) ⇒
-        val outputDef = q"implicit val jsonWrites = org.elastic4play.models.Output.apply[$className]"
-        val outputModule = tail match {
-          case ModuleDef(moduleMods, moduleName, moduleTemplate) :: Nil ⇒
-            ModuleDef(moduleMods, moduleName, Template(
-              parents = moduleTemplate.parents,
-              self    = moduleTemplate.self,
-              body    = moduleTemplate.body :+ outputDef))
-          case Nil ⇒
-            val moduleName = className.toTermName
-            q"object $moduleName { $outputDef }"
-        }
+      case (ClassDef(classMods, className, Nil, template)) :: tail if classMods.hasFlag(Flag.CASE) ⇒
+        val writes = TermName(c.freshName("writes"))
 
-        Block(outputClass :: outputModule :: Nil, Literal(Constant(())))
-    }
-  }
-
-  def entityOutputImpl(annottees: Tree*): Tree = {
-    annottees.toList match {
-      case (outputClass @ ClassDef(classMods, className, Nil, _)) :: tail if classMods.hasFlag(Flag.CASE) ⇒
-        val outputDef = q"implicit val jsonWrites = org.elastic4play.models.Output.entity[$className]"
-        val outputModule = tail match {
-          case ModuleDef(moduleMods, moduleName, moduleTemplate) :: Nil ⇒
-            ModuleDef(moduleMods, moduleName, Template(
-              parents = moduleTemplate.parents,
-              self    = moduleTemplate.self,
-              body    = moduleTemplate.body :+ outputDef))
-          case Nil ⇒
-            val moduleName = className.toTermName
-            q"object $moduleName { $outputDef }"
-        }
-
-        Block(outputClass :: outputModule :: Nil, Literal(Constant(())))
+        val writesDef = q"private val $writes = org.elastic4play.models.Output.apply[$className]"
+        val toJsonDef = q"def toJson: JsObject = $writes.writes(this).as[JsObject]"
+        val toEntityJsonDef = q"""def toJson(e: org.elastic4play.models.Entity): JsObject = toJson +
+               ("_id"        -> play.api.libs.json.JsString(e._id)) +
+               ("_routing"   -> play.api.libs.json.JsString(e._routing)) +
+               ("_parent"    -> e._parent.fold[play.api.libs.json.JsValue](play.api.libs.json.JsNull)(play.api.libs.json.JsString.apply)) +
+               ("_createdAt" -> play.api.libs.json.JsNumber(e._createdAt.getTime())) +
+               ("_createdBy" -> play.api.libs.json.JsString(e._createdBy)) +
+               ("_updatedAt" -> e._updatedAt.fold[play.api.libs.json.JsValue](play.api.libs.json.JsNull)(d ⇒ play.api.libs.json.JsNumber(d.getTime()))) +
+               ("_updatedBy" -> e._updatedBy.fold[play.api.libs.json.JsValue](play.api.libs.json.JsNull)(play.api.libs.json.JsString.apply)) +
+               ("_type"      -> play.api.libs.json.JsString(${className.toTermName.toString}))
+         """
+        val classDef = ClassDef(classMods, className, Nil, Template(
+          template.parents,
+          template.self,
+          template.body :+ writesDef :+ toJsonDef :+ toEntityJsonDef))
+        Block(classDef :: tail, Literal(Constant(())))
     }
   }
 }

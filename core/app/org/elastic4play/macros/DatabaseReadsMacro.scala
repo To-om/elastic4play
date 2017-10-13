@@ -85,8 +85,8 @@ trait DatabaseReadsMacro extends MacroUtil {
         val databaseReads = _getDatabaseReads(subType.typeSymbol, subType)
         Some(q"""
                 import org.elastic4play.models.DatabaseReads
-                import play.api.libs.json.{ JsArray, JsValue, JsNull }
-                import scala.util.{ Failure, Success, Try }
+                import play.api.libs.json.{ JsValue, JsNull }
+                import scala.util.{ Success, Try }
 
                 DatabaseReads((json: Option[JsValue]) ⇒ {
                   json.fold[Try[Option[$subType]]](Success(None)) {

@@ -9,28 +9,6 @@ import org.elastic4play.models.WithOutput
 class JsonMacro(val c: blackbox.Context) extends MacroUtil {
   import c.universe._
 
-  def getEntityJsonWrites[E: WeakTypeTag]: Tree = {
-    val eType = weakTypeOf[E]
-    val writes = _getJsonWrites(eType.typeSymbol, eType)
-    val className = eType.toString.split("\\.").last
-    val modelName = Character.toLowerCase(className.charAt(0)) + className.substring(1)
-
-    q"""
-      import play.api.libs.json.{ JsObject, OWrites, JsString, JsValue, JsNull, JsNumber }
-      OWrites[$eType with Entity] { (e: $eType with Entity) ⇒
-        $writes.writes(e).as[JsObject] +
-          ("_id"        -> JsString(e._id)) +
-          ("_routing"   -> JsString(e._routing)) +
-          ("_parent"    -> e._parent.fold[JsValue](JsNull)(JsString.apply)) +
-          ("_createdAt" -> JsNumber(e._createdAt.getTime())) +
-          ("_createdBy" -> JsString(e._createdBy)) +
-          ("_updatedAt" -> e._updatedAt.fold[JsValue](JsNull)(d ⇒ JsNumber(d.getTime()))) +
-          ("_updatedBy" -> e._updatedBy.fold[JsValue](JsNull)(JsString.apply)) +
-          ("_type"      -> JsString($modelName))
-      }
-      """
-  }
-
   def getJsonWrites[E: WeakTypeTag]: Tree = {
     val eType = weakTypeOf[E]
     _getJsonWrites(eType.typeSymbol, eType)

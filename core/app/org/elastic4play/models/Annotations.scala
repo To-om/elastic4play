@@ -21,11 +21,6 @@ class EntityModel extends StaticAnnotation {
 }
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
-class EntityJsonOutput extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro AnnotationMacro.entityOutputImpl
-}
-
-@compileTimeOnly("enable macro paradise to expand macro annotations")
 class JsonOutput extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro AnnotationMacro.outputImpl
 }
