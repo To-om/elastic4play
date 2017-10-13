@@ -14,7 +14,7 @@ trait TestUtils {
 
   def getDatabaseWrites[T]: DatabaseWrites[T] = macro ModelMacro.getDatabaseWrites[T]
   def getDatabaseReads[T]: DatabaseReads[T] = macro ModelMacro.getDatabaseReads[T]
-  def getEntityJsonWrites[T]: OWrites[T with Entity] = macro ModelMacro.getEntityJsonWrites[T]
+  def getEntityJsonWrites[T]: OWrites[T with Entity] = macro JsonMacro.getEntityJsonWrites[T]
   def mkEntityReader[T]: (JsValue, Model, Try[T]) ⇒ Try[T with Entity] = macro ModelMacro.mkEntityReader[T]
   def mkAttachSaver[T]: AttachmentSrv ⇒ T ⇒ Future[T] = macro ModelMacro.mkAttachmentSaver[T]
   def databaseMaps[T]: Map[FPath, DatabaseWrites[_]] = macro ModelMacro.databaseMaps[T]

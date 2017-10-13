@@ -6,7 +6,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{ Sink, Source }
 import org.elastic4play.models.Entity
 import play.api.Logger
-import play.api.libs.json.JsObject
 
 import scala.concurrent.{ ExecutionContext, Future }
 

@@ -1,9 +1,13 @@
 package org.elastic4play.macros
 
+import java.util.Date
+
+import play.api.libs.json.{ JsNull, JsObject, Json }
+
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 
-import org.elastic4play.models.{ EntityModel, TransformFrom, TransformInto }
+import org.elastic4play.models._
 
 class AnnotationMacroTest extends Specification with TestUtils with Mockito {
 
@@ -43,6 +47,47 @@ class AnnotationMacroTest extends Specification with TestUtils with Mockito {
       case class MyEntity(name: String, value: Int)
 
       MyEntity.model.name must_=== "myEntity"
+    }
+
+    "output case class" in {
+      @JsonOutput
+      case class MyDTO(s: String, i: Int, u: String, v: Boolean)
+
+      val expectedOutput = Json.obj(
+        "s" -> "sParam",
+        "i" -> 42,
+        "u" -> "uParam",
+        "v" -> true)
+      Json.toJson(MyDTO("sParam", 42, "uParam", true)).as[JsObject].fields must containTheSameElementsAs(expectedOutput.fields)
+    }
+
+    "output entity" in {
+      @EntityJsonOutput
+      case class MyOtherEntity(u: String, e: String, d: Double, v: Boolean)
+      val myEntity = new MyOtherEntity("uParam", "eParam", 42.1, true) with Entity {
+        val _id = "entityId"
+        val _routing = "routingInformation"
+        val _parent = None
+        val _model: Model = null
+        val _createdBy = "me"
+        val _updatedBy = None
+        val _createdAt = new Date(1507878244000L)
+        val _updatedAt = None
+      }
+      val expectedOutput = Json.obj(
+        "u" -> "uParam",
+        "e" -> "eParam",
+        "d" -> 42.1,
+        "v" -> true,
+        "_id" -> "entityId",
+        "_routing" -> "routingInformation",
+        "_parent" -> JsNull,
+        "_createdAt" -> 1507878244000L,
+        "_createdBy" -> "me",
+        "_updatedAt" -> JsNull,
+        "_updatedBy" -> JsNull,
+        "_type" -> "myOtherEntity")
+      Json.toJson(myEntity).as[JsObject].fields must containTheSameElementsAs(expectedOutput.fields)
     }
   }
 }

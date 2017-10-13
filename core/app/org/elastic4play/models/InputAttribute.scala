@@ -26,6 +26,7 @@ abstract class BaseFieldsParser[T] { bfp ⇒
     }
   }
 }
+
 object BaseFieldsParser {
   def empty[T](value: T): FieldsParser[T] = FieldsParser[T]("empty") { case _ ⇒ Good(value) }
 }

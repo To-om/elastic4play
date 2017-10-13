@@ -114,4 +114,42 @@ class AnnotationMacro(val c: whitebox.Context) extends MacroUtil {
         Block(modelClass :: modelModule :: Nil, Literal(Constant(())))
     }
   }
+
+  def outputImpl(annottees: Tree*): Tree = {
+    annottees.toList match {
+      case (outputClass @ ClassDef(classMods, className, Nil, _)) :: tail if classMods.hasFlag(Flag.CASE) ⇒
+        val outputDef = q"implicit val jsonWrites = org.elastic4play.models.Output.apply[$className]"
+        val outputModule = tail match {
+          case ModuleDef(moduleMods, moduleName, moduleTemplate) :: Nil ⇒
+            ModuleDef(moduleMods, moduleName, Template(
+              parents = moduleTemplate.parents,
+              self    = moduleTemplate.self,
+              body    = moduleTemplate.body :+ outputDef))
+          case Nil ⇒
+            val moduleName = className.toTermName
+            q"object $moduleName { $outputDef }"
+        }
+
+        Block(outputClass :: outputModule :: Nil, Literal(Constant(())))
+    }
+  }
+
+  def entityOutputImpl(annottees: Tree*): Tree = {
+    annottees.toList match {
+      case (outputClass @ ClassDef(classMods, className, Nil, _)) :: tail if classMods.hasFlag(Flag.CASE) ⇒
+        val outputDef = q"implicit val jsonWrites = org.elastic4play.models.Output.entity[$className]"
+        val outputModule = tail match {
+          case ModuleDef(moduleMods, moduleName, moduleTemplate) :: Nil ⇒
+            ModuleDef(moduleMods, moduleName, Template(
+              parents = moduleTemplate.parents,
+              self    = moduleTemplate.self,
+              body    = moduleTemplate.body :+ outputDef))
+          case Nil ⇒
+            val moduleName = className.toTermName
+            q"object $moduleName { $outputDef }"
+        }
+
+        Block(outputClass :: outputModule :: Nil, Literal(Constant(())))
+    }
+  }
 }

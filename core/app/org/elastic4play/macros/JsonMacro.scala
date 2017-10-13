@@ -6,45 +6,8 @@ import play.api.libs.json.Writes
 
 import org.elastic4play.models.WithOutput
 
-trait JsonMacro extends MacroUtil {
-  val c: blackbox.Context
-
+class JsonMacro(val c: blackbox.Context) extends MacroUtil {
   import c.universe._
-
-  /**
-   * This macro build a method that takes a json object, a model and an object E (a try of) and returns an Entity E
-   * with Entity members filled by json object member and by the provided model.
-   *
-   * @tparam E type of the object
-   * @return a method that returns an E with Entity
-   */
-  def mkEntityReader[E: WeakTypeTag]: Tree = {
-    val eType = weakTypeOf[E]
-    eType match {
-      case CaseClassType(symbols @ _*) ⇒
-        val params = symbols.map(p ⇒ q"e.${TermName(p.name.toString)}")
-        val id = if (symbols.exists(_.name.toString == "_id")) q"()" else q"""val _id = (json \ "_id").as[String]"""
-        q"""
-       import scala.util.Try
-       import play.api.libs.json.JsValue
-       import org.elastic4play.models.{ Entity, Model }
-
-       (json: JsValue, model: Model, te: Try[$eType]) ⇒
-         te.map { e ⇒
-           new $eType(..$params) with Entity {
-             $id
-             val _routing = (json \ "_routing").as[String]
-             val _parent = (json \ "_parent").asOpt[String]
-             val _model = model
-             val _createdBy = (json \ "_createdBy").as[String]
-             val _createdAt = (json \ "_createdAt").as[java.util.Date]
-             val _updatedBy = (json \ "_updatedBy").asOpt[String]
-             val _updatedAt = (json \ "_updatedAt").asOpt[java.util.Date]
-           }
-         }
-    """
-    }
-  }
 
   def getEntityJsonWrites[E: WeakTypeTag]: Tree = {
     val eType = weakTypeOf[E]
@@ -68,10 +31,10 @@ trait JsonMacro extends MacroUtil {
       """
   }
 
-    def getJsonWrites[E: WeakTypeTag]: Tree = {
-      val eType = weakTypeOf[E]
-      _getJsonWrites(eType.typeSymbol, eType)
-    }
+  def getJsonWrites[E: WeakTypeTag]: Tree = {
+    val eType = weakTypeOf[E]
+    _getJsonWrites(eType.typeSymbol, eType)
+  }
 
   private def _getJsonWrites(symbol: Symbol, eType: Type): Tree = {
     getJsonWritesFromAnnotation(symbol, eType)
