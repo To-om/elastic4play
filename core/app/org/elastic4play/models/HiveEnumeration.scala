@@ -2,7 +2,6 @@ package org.elastic4play.models
 
 import com.sksamuel.elastic4s.mappings.TextFieldDefinition
 import org.elastic4play.InvalidFormatAttributeError
-import org.elastic4play.models.FieldsParser.stringFieldsParser
 import org.scalactic.{ One, Or }
 import play.api.libs.json._
 
@@ -13,7 +12,7 @@ trait HiveEnumeration {
   type Type
 
   implicit val databaseMapping = ESFieldMapping[Type](TextFieldDefinition(_).analyzer("keyword").fielddata(true))
-  implicit val fieldsParser = stringFieldsParser.map(toString) {
+  implicit val fieldsParser = FieldsParser.string.map(toString) {
     case s ⇒
       Or.from(Try(getByName(s)))
         .badMap(_ ⇒ One(InvalidFormatAttributeError("", toString, FString(s))))

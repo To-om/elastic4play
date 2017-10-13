@@ -132,7 +132,7 @@ class FieldsParserMacro(val c: blackbox.Context) extends MacroUtil {
           case (parser, s) ⇒
             val symbolName = s.name.toString
             val subParser = _getUpdateFieldsParser(s, s.typeSignature)
-            q"$parser ++ $subParser.onPath($symbolName)"
+            q"$parser ++ $subParser.on($symbolName)"
         }
       case _ ⇒ updateFieldsParser
     }

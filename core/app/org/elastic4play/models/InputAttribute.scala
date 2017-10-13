@@ -32,11 +32,11 @@ object BaseFieldsParser {
 }
 
 case class UpdateFieldsParser[T](formatName: String, parsers: Map[FPath, FieldsParser[UpdateOps.Type]]) extends BaseFieldsParser[Map[FPath, UpdateOps.Type]] {
-  def onPath(pathPrefix: FPath): UpdateFieldsParser[T] = UpdateFieldsParser[T](formatName, parsers.map {
+  def on(pathPrefix: FPath): UpdateFieldsParser[T] = UpdateFieldsParser[T](formatName, parsers.map {
     case (path, parser) ⇒ (pathPrefix / path) → parser
   })
 
-  def onPath(pathPrefix: String): UpdateFieldsParser[T] = onPath(FPath(pathPrefix))
+  def on(pathPrefix: String): UpdateFieldsParser[T] = on(FPath(pathPrefix))
 
   def sequence: UpdateFieldsParser[T] = UpdateFieldsParser[T](s"seq($formatName)", parsers.map {
     case (path, parser) ⇒ (FPath.seq / path) → parser
@@ -77,6 +77,12 @@ case class FieldsParser[T](formatName: String)(val parse: PartialFunction[(FPath
   }
 
   def apply(field: Field): T Or Every[AttributeError] = apply(FPath.empty, field)
+
+  def on(pathElement: String): FieldsParser[T] = {
+    FieldsParser[T](formatName) {
+      case (path, field) ⇒ apply(path, field.get(pathElement))
+    }
+  }
 
   def andThen[U, R](nextFormatName: String)(fp: FieldsParser[U])(f: (U, T) ⇒ R): FieldsParser[R] = {
     FieldsParser[R](s"$formatName&$nextFormatName") {
@@ -133,30 +139,30 @@ object FieldsParser {
   def attachment: FieldsParser[Attachment] = FieldsParser[Attachment]("attachment") {
     case (_, f: FFile) ⇒ Good(f)
   }
-  implicit val textFieldsParser: FieldsParser[Text] = FieldsParser[Text]("text") {
+  implicit val text: FieldsParser[Text] = FieldsParser[Text]("text") {
     case (_, FString(s))     ⇒ Good(s.asInstanceOf[Text])
     case (_, FAny(s :: Nil)) ⇒ Good(s.asInstanceOf[Text])
   }
-  implicit val stringFieldsParser: FieldsParser[String] = FieldsParser[String]("string") {
+  implicit val string: FieldsParser[String] = FieldsParser[String]("string") {
     case (_, FString(value)) ⇒ Good(value)
     case (_, FAny(s :: Nil)) ⇒ Good(s)
   }
-  implicit val intFieldsParser: FieldsParser[Int] = FieldsParser[Int]("int")(unlift {
+  implicit val int: FieldsParser[Int] = FieldsParser[Int]("int")(unlift {
     case (_, FNumber(n))     ⇒ Some(Good(n.toInt))
     case (_, FAny(s :: Nil)) ⇒ Try(Good(s.toInt)).toOption
     case _                   ⇒ None
   })
-  implicit val longFieldsParser: FieldsParser[Long] = FieldsParser[Long]("long")(unlift {
+  implicit val long: FieldsParser[Long] = FieldsParser[Long]("long")(unlift {
     case (_, FNumber(n))     ⇒ Some(Good(n.toLong))
     case (_, FAny(s :: Nil)) ⇒ Try(Good(s.toLong)).toOption
     case _                   ⇒ None
   })
-  implicit val booleanFieldsParser: FieldsParser[Boolean] = FieldsParser[Boolean]("boolean")(unlift {
+  implicit val boolean: FieldsParser[Boolean] = FieldsParser[Boolean]("boolean")(unlift {
     case (_, FBoolean(b))    ⇒ Some(Good(b))
     case (_, FAny(s :: Nil)) ⇒ Try(Good(s.toBoolean)).toOption
     case _                   ⇒ None
   })
-  implicit val dateFieldsParser: FieldsParser[Date] = FieldsParser[Date]("date")(unlift {
+  implicit val date: FieldsParser[Date] = FieldsParser[Date]("date")(unlift {
     case (_, FNumber(n))     ⇒ Some(Good(new Date(n)))
     case (_, FAny(s :: Nil)) ⇒ Try(Good(new Date(s.toLong))).toOption
     case _                   ⇒ None

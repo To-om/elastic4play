@@ -86,5 +86,12 @@ class FieldsParserMacroTest extends Specification with TestUtils {
 
       fieldsParser(fields) must_=== Good(multiAttachClass)
     }
+
+    "parse a simple value" in {
+      val fieldsParser = FieldsParser.string.on("myString")
+      val fields = FObject("myString" -> FString("stringValue"))
+
+      fieldsParser(fields) must_=== Good("stringValue")
+    }
   }
 }
