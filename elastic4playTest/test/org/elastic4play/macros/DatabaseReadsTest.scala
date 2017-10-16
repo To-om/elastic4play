@@ -32,14 +32,14 @@ class DatabaseReadsTest extends Specification with TestUtils {
       val data = Some(Json.obj(
         "name" -> "complexClass",
         "value" -> 42,
-      "subClasses" -> Json.arr(
-        Json.obj(
-          "name" -> "sc1",
-        ),
-        Json.obj(
-          "name" -> "sc2",
-          "option" -> 25
-        )      )      ))
+        "subClasses" -> Json.arr(
+          Json.obj(
+            "name" -> "sc1",
+          ),
+          Json.obj(
+            "name" -> "sc2",
+            "option" -> 25
+          ))))
       val expectedClass = ComplexClass("complexClass", 42, Seq(SubClass1("sc1", None), SubClass1("sc2", Some(25))))
       databaseReads(data) must_=== Success(expectedClass)
     }
@@ -76,11 +76,11 @@ class DatabaseReadsTest extends Specification with TestUtils {
       @WithDatabase(readWriteDefinitions.subClass1Reads, readWriteDefinitions.subClass1Writes)
       case class SubClass(name: String, value: Int)
       case class ComplexClass(
-                              name: String,
-                              value: Int,
-                              @WithDatabase(readWriteDefinitions.subClass2Reads, readWriteDefinitions.subClass2Writes)
-                              sc1: SubClass,
-                              sc2: SubClass)
+                               name: String,
+                               value: Int,
+                               @WithDatabase(readWriteDefinitions.subClass2Reads, readWriteDefinitions.subClass2Writes)
+                               sc1: SubClass,
+                               sc2: SubClass)
 
       val databaseReads = getDatabaseReads[ComplexClass]
 
@@ -88,10 +88,10 @@ class DatabaseReadsTest extends Specification with TestUtils {
         "name" -> "complexClass",
         "value" -> 42,
         "sc1" -> Json.obj(
-            "nameField" -> "sc1",
-            "valueField" -> 11
-          ),
-        "sc2" -> "sc2,25")      )
+          "nameField" -> "sc1",
+          "valueField" -> 11
+        ),
+        "sc2" -> "sc2,25"))
       val expectedClass = ComplexClass("complexClass", 42, SubClass("sc1", 11), SubClass("sc2", 25))
 
       databaseReads(data) must_=== Success(expectedClass)
@@ -100,7 +100,7 @@ class DatabaseReadsTest extends Specification with TestUtils {
 
     "read class with with implicit" in {
       case class SubClass(name: String, value: Int)
-      case class ComplexClass(                               name: String,                               value: Int,                               sc: SubClass)
+      case class ComplexClass(name: String, value: Int, sc: SubClass)
 
       val subClassRegex = "(\\w+),(\\d+)".r
       implicit val subClass1Reads = DatabaseReads[SubClass] { json =>

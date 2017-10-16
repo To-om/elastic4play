@@ -2,7 +2,7 @@ package org.elastic4play.controllers
 
 import javax.inject.{ Inject, Singleton }
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Keep, Sink, Source }
 
 import org.elastic4play.JsonFormat._
 import org.elastic4play.models.{ BaseFieldsParser, Field }
@@ -18,6 +18,8 @@ import play.api.mvc._
 import play.api.Logger
 import play.api.libs.json.{ Json, Writes }
 import play.api.mvc.Results.BadRequest
+
+import akka.stream.Materializer
 /**
  * API entry point. This class create a controller action which parse request and check authentication
  *
@@ -29,7 +31,8 @@ import play.api.mvc.Results.BadRequest
 class ApiMethod @Inject() (
     authenticated: Authenticated,
     actionBuilder: DefaultActionBuilder,
-    implicit val ec: ExecutionContext) {
+    implicit val ec: ExecutionContext,
+    implicit val mat: Materializer) {
 
   lazy val logger = Logger(getClass)
 
@@ -55,28 +58,6 @@ class ApiMethod @Inject() (
       name: String,
       fieldsParser: BaseFieldsParser[V],
       req: Request[AnyContent] ⇒ Future[R[AnyContent]]) {
-
-    //    /**
-    //     * Extract a model from request. This method add the related entity to resulted record (of type V)
-    //     *
-    //     * @param model Model to extract from request
-    //     * @return a new entry point with added fields parser
-    //     */
-    //    def extract[N](model: Model.Aux[_, N]) = EntryPoint(
-    //      name,
-    //      fieldsParser.andThen(model.createFieldsParser)((modelValue, list) ⇒ labelled.field[N](modelValue) :: list),
-    //      req)
-    //
-    //    /**
-    //     * Extract a model update from request. This method add possible updated to the model entity (UpdateOps)
-    //     *
-    //     * @param model Model to extract updates from request
-    //     * @return a new entry point with added fields parser
-    //     */
-    //    def extractUpdates(model: Model) = EntryPoint(
-    //      name,
-    //      fieldsParser.andThen(model.updateFieldsParser)((modelValue, list) ⇒ labelled.field[model.N](modelValue) :: list),
-    //      req)
 
     /**
      * Extract a field from request.
@@ -108,17 +89,6 @@ class ApiMethod @Inject() (
       })
     }
 
-    //    /**
-    //     * Use the remaining fields to build a list of unknown attribute error. This method is used when all fields parser
-    //     * have been used. There should not have any remaining fields.
-    //     *
-    //     * @param field remaining fields after parsing
-    //     * @return list of unknown attribute error
-    //     */
-    //    private def unknownAttributes(field: Field): Seq[UnknownAttributeError] = {
-    //      fields.map(UnknownAttributeError.tupled).toSeq
-    //    }
-
     /**
      * Materialize action using a function that transform request with parsed record info stream of writable
      *
@@ -126,14 +96,26 @@ class ApiMethod @Inject() (
      * @tparam T type of element in stream. Element must be writable to JSON
      * @return Action
      */
-    def chunked[T: Writes](block: R[Record[V, HNil, Nothing]] ⇒ Source[T, _]): Action[AnyContent] = {
-      def sourceToResult[TT: Writes](src: Source[TT, _]): Result = {
-        Results.Ok.chunked(src.map(Json.toJson(_))) // FIXME add "[", "," and "]"
+    def chunked[T: Writes](block: R[Record[V]] ⇒ Source[T, Long]): Action[AnyContent] = {
+      def sourceToResult(src: Source[T, Long]): Result = {
+
+        val (numberOfElement, publisher) = src
+          .map(t ⇒ Json.toJson(t).toString)
+          .intersperse("[", ",", "]")
+          .toMat(Sink.asPublisher(false))(Keep.both)
+          .run()
+
+        Results.Ok
+          .chunked {
+            Source.fromPublisher(publisher)
+          }
+          .as("application/json")
+          .withHeaders("X-total" -> numberOfElement.toString)
       }
 
       actionBuilder.async { request: Request[AnyContent] ⇒
         fieldsParser(Field(request)) match {
-          case Good(values) ⇒ req(request).map { r ⇒ sourceToResult(block(r.map(_ ⇒ Record(values)((_: HNil) ⇒ ???)).asInstanceOf[R[Record[V, HNil, Nothing]]])) }
+          case Good(values) ⇒ req(request).map { r ⇒ sourceToResult(block(r.map(_ ⇒ Record(values)).asInstanceOf[R[Record[V]]])) }
           case Bad(errors)  ⇒ Future.successful(BadRequest(Json.toJson(AttributeCheckingError(errors.toSeq))))
         }
       }
@@ -145,10 +127,10 @@ class ApiMethod @Inject() (
      * @param block business login function that transform request into future response
      * @return Action
      */
-    def async(block: R[Record[V, HNil, Nothing]] ⇒ Future[Result]): Action[AnyContent] = {
+    def async(block: R[Record[V]] ⇒ Future[Result]): Action[AnyContent] = {
       actionBuilder.async { request: Request[AnyContent] ⇒
         fieldsParser(Field(request)) match {
-          case Good(values) ⇒ req(request).flatMap { r ⇒ block(r.map(_ ⇒ Record(values)((_: HNil) ⇒ ???)).asInstanceOf[R[Record[V, HNil, Nothing]]]) }
+          case Good(values) ⇒ req(request).flatMap { r ⇒ block(r.map(_ ⇒ Record(values)).asInstanceOf[R[Record[V]]]) }
           case Bad(errors)  ⇒ Future.successful(BadRequest(Json.toJson(AttributeCheckingError(errors.toSeq))))
         }
       }
@@ -160,6 +142,6 @@ class ApiMethod @Inject() (
      * @param block business login function that transform request into response
      * @return Action
      */
-    def apply(block: R[Record[V, HNil, Nothing]] ⇒ Result): Action[AnyContent] = async(r ⇒ Future.successful(block(r)))
+    def apply(block: R[Record[V]] ⇒ Result): Action[AnyContent] = async(r ⇒ Future.successful(block(r)))
   }
 }

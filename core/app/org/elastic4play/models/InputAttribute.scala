@@ -65,6 +65,7 @@ case class UpdateFieldsParser[T](formatName: String, parsers: Map[FPath, FieldsP
 object UpdateFieldsParser {
   def empty[T]: UpdateFieldsParser[T] = new UpdateFieldsParser[T]("empty", Map.empty)
   def apply[T](formatName: String)(parsers: (FPath, FieldsParser[UpdateOps.Type])*): UpdateFieldsParser[T] = UpdateFieldsParser[T](formatName, parsers.toMap)
+  def apply[T]: UpdateFieldsParser[T] = macro FieldsParserMacro.getUpdateFieldsParser[T]
 }
 
 case class FieldsParser[T](formatName: String)(val parse: PartialFunction[(FPath, Field), T Or Every[AttributeError]]) extends BaseFieldsParser[T] {

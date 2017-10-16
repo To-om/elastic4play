@@ -18,7 +18,7 @@ object Selector {
   implicit def mkSelector[L <: HList, K, O]: Aux[L, K, O] = macro RecordMacro.mkSelector[L, K]
 }
 
-case class Record[C <: HList, T <: HList, E](list: C)(val matFunction: T ⇒ E) {
+case class Record[C <: HList](list: C) {
   type FSL[K] = Selector[C, K]
   def apply(key: Witness)(implicit selector: Selector[C, key.T]): selector.Out = selector(list)
 }
