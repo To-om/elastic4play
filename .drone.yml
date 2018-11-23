@@ -1,0 +1,52 @@
+---
+kind: pipeline
+name: default
+
+steps:
+  # Restore cache of downloaded dependencies
+  - name: restore-cache
+    image: drillster/drone-volume-cache
+    settings:
+      restore: true
+      mount:
+        - .sbt
+        - .ivy2
+    volumes: [{name: cache, path: /cache}]
+
+  # Run project tests
+  - name: run-tests
+    image: thehiveproject/drone-scala-node
+    commands:
+      - sbt -Duser.home=$PWD test
+
+  # Publish package
+  - name: publish-package
+    image: thehiveproject/drone-scala-node
+    settings:
+      bintray_user: {from_secret: bintray_user}
+      bintray_key: {from_secret: bintray_key}
+    commands:
+      - cat ~/.bintray/.credentials <<- _EOF_
+          realm = Bintray API Realm
+          host = api.bintray.com
+          user = $PLUGIN_BINTRAY_USER
+          password = $PLUGIN_BINTRAY_KEY
+        _EOF_
+      - sbt -Duser.home=$PWD publish
+    when:
+      event: [tag]
+
+  # Save external libraries in cache
+  - name: save-cache
+    image: drillster/drone-volume-cache
+    settings:
+      rebuild: true
+      mount:
+        - .sbt
+        - .ivy2
+    volumes: [{name: cache, path: /cache}]
+
+volumes:
+  - name: cache
+    host:
+      path: /opt/drone/cache
