@@ -2,7 +2,15 @@
 kind: pipeline
 name: default
 
+# Disable default clone
+clone:
+  disable: true
+
 steps:
+  # This clone step doesn't use "root" user
+  - name: clone
+    image: plugins/git:next
+
   # Restore cache of downloaded dependencies
   - name: restore-cache
     image: drillster/drone-volume-cache
