@@ -32,7 +32,7 @@ libraryDependencies ++= Seq(
 
 PlayKeys.externalizeResources := false
 
-bintrayOrganization := Some("thehive-project")
+bintrayOrganization := Some("thehive-project-staging")
 
 bintrayRepository := "maven"
 
